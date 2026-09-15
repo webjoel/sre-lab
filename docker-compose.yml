@@ -1,0 +1,77 @@
+# Ambiente da Fase 1: aplicações + dependências em docker compose.
+# Credenciais abaixo são só para desenvolvimento local; na Fase 4 elas vão para o Vault.
+name: sre-lab-apps
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pedidos
+      POSTGRES_PASSWORD: pedidos
+      POSTGRES_DB: pedidos
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./apps/order-api/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pedidos -d pedidos"]
+      interval: 5s
+      retries: 10
+    mem_limit: 512m
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: pedidos
+      RABBITMQ_DEFAULT_PASS: pedidos
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672" # painel: http://localhost:15672
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 10
+    mem_limit: 512m
+
+  order-api:
+    build: ./apps/order-api
+    environment:
+      DATABASE_URL: postgres://pedidos:pedidos@postgres:5432/pedidos?sslmode=disable
+      AMQP_URL: amqp://pedidos:pedidos@rabbitmq:5672/
+      CHAOS_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    # Sem healthcheck aqui: a imagem distroless não tem shell nem curl.
+    # No Kubernetes (Fase 2) quem checa /healthz e /readyz é o kubelet.
+
+  payment-worker:
+    build: ./apps/payment-worker
+    environment:
+      DATABASE_URL: postgresql://pedidos:pedidos@postgres:5432/pedidos
+      AMQP_URL: amqp://pedidos:pedidos@rabbitmq:5672/%2F
+      FAIL_RATE: "0.05"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8081/healthz', timeout=2)"]
+      interval: 10s
+      retries: 3
