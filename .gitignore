@@ -12,3 +12,5 @@ kubeconfig*
 __pycache__/
 .venv/
 .ruff_cache/
+apps/order-api/order-api
+apps/order-api/order-api

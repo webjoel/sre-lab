@@ -7,6 +7,9 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
         args: [--allow-multiple-documents]
+        # Templates do Helm não são YAML válido antes de renderizados ({{ ... }} no lugar
+        # de valores). Quem os valida é 'make k8s-lint' (helm lint + helm template).
+        exclude: ^deploy/charts/.*/templates/
       - id: check-added-large-files
       - id: detect-private-key
 
@@ -28,7 +31,7 @@ repos:
       - id: shellcheck
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.7
+    rev: v0.16.8
     hooks:
       - id: ruff-check
       - id: ruff-format

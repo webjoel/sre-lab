@@ -8,15 +8,50 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// App guarda as dependências. Elas são preenchidas de forma assíncrona, depois que o
+// servidor HTTP já está no ar, então todo acesso passa por mutex.
 type App struct {
+	mu     sync.RWMutex
 	db     *pgxpool.Pool
 	broker *Broker
+}
+
+func (a *App) setDeps(db *pgxpool.Pool, broker *Broker) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.db, a.broker = db, broker
+}
+
+func (a *App) deps() (*pgxpool.Pool, *Broker) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.db, a.broker
+}
+
+func (a *App) brokerClosed() <-chan *amqp.Error {
+	_, broker := a.deps()
+	if broker == nil {
+		return nil
+	}
+	return broker.Closed()
+}
+
+func (a *App) closeDeps() {
+	db, broker := a.deps()
+	if broker != nil {
+		broker.Close()
+	}
+	if db != nil {
+		db.Close()
+	}
 }
 
 type Order struct {
@@ -56,6 +91,12 @@ func scanOrder(row pgx.Row, o *Order) error {
 }
 
 func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
+	db, broker := a.deps()
+	if db == nil || broker == nil {
+		writeError(w, http.StatusServiceUnavailable, "aplicação ainda inicializando")
+		return
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -71,7 +112,7 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var o Order
-	row := a.db.QueryRow(r.Context(),
+	row := db.QueryRow(r.Context(),
 		`INSERT INTO orders (customer_id, amount_cents, currency) VALUES ($1, $2, $3) RETURNING `+orderColumns,
 		req.CustomerID, req.AmountCents, strings.ToUpper(req.Currency))
 	if err := scanOrder(row, &o); err != nil {
@@ -83,7 +124,7 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 	// PROBLEMA INTENCIONAL (exercício da Fase 8): gravar no banco e publicar na fila não é atômico.
 	// Se o publish falhar, o pedido fica PENDING para sempre. A correção clássica é o padrão Outbox.
 	evt := OrderCreated{OrderID: o.ID, AmountCents: o.AmountCents, Currency: o.Currency}
-	if err := a.broker.PublishOrderCreated(r.Context(), evt); err != nil {
+	if err := broker.PublishOrderCreated(r.Context(), evt); err != nil {
 		slog.Error("pedido gravado mas evento não publicado", "order_id", o.ID, "err", err)
 		writeError(w, http.StatusServiceUnavailable, "pedido gravado, mas não enviado para processamento")
 		return
@@ -95,6 +136,12 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) getOrder(w http.ResponseWriter, r *http.Request) {
+	db, _ := a.deps()
+	if db == nil {
+		writeError(w, http.StatusServiceUnavailable, "aplicação ainda inicializando")
+		return
+	}
+
 	id := r.PathValue("id")
 	if !uuidPattern.MatchString(id) {
 		writeError(w, http.StatusNotFound, "pedido não encontrado")
@@ -102,7 +149,7 @@ func (a *App) getOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var o Order
-	row := a.db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id = $1`, id)
+	row := db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id = $1`, id)
 	if err := scanOrder(row, &o); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "pedido não encontrado")
@@ -126,13 +173,25 @@ func (a *App) readyz(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
+	db, broker := a.deps()
 	checks := map[string]string{"postgres": "ok", "rabbitmq": "ok"}
 	ready := true
-	if err := a.db.Ping(ctx); err != nil {
-		checks["postgres"] = err.Error()
+
+	switch {
+	case db == nil:
+		checks["postgres"] = "conectando"
 		ready = false
+	default:
+		if err := db.Ping(ctx); err != nil {
+			checks["postgres"] = err.Error()
+			ready = false
+		}
 	}
-	if !a.broker.IsOpen() {
+	switch {
+	case broker == nil:
+		checks["rabbitmq"] = "conectando"
+		ready = false
+	case !broker.IsOpen():
 		checks["rabbitmq"] = "conexão fechada"
 		ready = false
 	}

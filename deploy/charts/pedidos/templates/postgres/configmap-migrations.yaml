@@ -1,0 +1,12 @@
+# As migrations vêm do mesmo arquivo usado no docker compose (.Files.Get),
+# então não há schema duplicado entre os dois ambientes.
+# Rodar migration via initdb só funciona no primeiro boot: a partir da Fase 5
+# isso vira um Job/initContainer com ferramenta de migration de verdade.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-migrations
+  labels: {{- include "pedidos.labels" . | nindent 4 }}
+data:
+  001_orders.sql: |
+{{ .Files.Get "files/001_orders.sql" | indent 4 }}

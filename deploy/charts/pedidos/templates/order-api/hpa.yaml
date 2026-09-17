@@ -1,0 +1,21 @@
+{{- if .Values.orderApi.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-order-api
+  labels: {{- include "pedidos.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-order-api
+  minReplicas: {{ .Values.orderApi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.orderApi.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.orderApi.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

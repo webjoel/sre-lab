@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pedidos
+description: Aplicações do domínio de pedidos (order-api, payment-worker) e suas dependências
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-payment-worker
+  labels: {{- include "pedidos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: payment-worker
+spec:
+  replicas: {{ .Values.paymentWorker.replicaCount }}
+  selector:
+    matchLabels: {{- include "pedidos.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: payment-worker
+  template:
+    metadata:
+      labels: {{- include "pedidos.labels" . | nindent 8 }}
+        app.kubernetes.io/component: payment-worker
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-payment-worker
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: payment-worker
+          image: "{{ .Values.paymentWorker.image }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.paymentWorker.healthPort }}
+          env:
+            - name: HEALTH_PORT
+              value: {{ .Values.paymentWorker.healthPort | quote }}
+            - name: FAIL_RATE
+              value: {{ .Values.paymentWorker.failRate | quote }}
+            - name: PREFETCH
+              value: {{ .Values.paymentWorker.prefetch | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-credenciais
+                  key: POSTGRES_PASSWORD
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-credenciais
+                  key: RABBITMQ_PASSWORD
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgres.username }}:$(POSTGRES_PASSWORD)@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.database }}"
+            - name: AMQP_URL
+              value: "amqp://{{ .Values.rabbitmq.username }}:$(RABBITMQ_PASSWORD)@{{ .Release.Name }}-rabbitmq:5672/%2F"
+          startupProbe:
+            httpGet: { path: /healthz, port: health }
+            periodSeconds: 3
+            failureThreshold: 20
+          livenessProbe:
+            httpGet: { path: /healthz, port: health }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources: {{- toYaml .Values.paymentWorker.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

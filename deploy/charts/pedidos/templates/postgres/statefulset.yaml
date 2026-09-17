@@ -1,0 +1,73 @@
+# StatefulSet (e não Deployment) porque o Postgres tem identidade e disco próprios:
+# nome estável, PVC por réplica e ordem de criação previsível.
+# Nota: esta é uma instância única, sem réplica nem backup. A operação de verdade
+# (failover, PgBouncer, backup) vem na Fase 4 com o operator CloudNativePG.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-postgres
+  labels: {{- include "pedidos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: {{ .Release.Name }}-postgres
+  replicas: 1
+  selector:
+    matchLabels: {{- include "pedidos.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels: {{- include "pedidos.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70        # usuário postgres na imagem alpine
+        fsGroup: 70          # garante que o PVC seja gravável por esse grupo
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.username | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-credenciais
+                  key: POSTGRES_PASSWORD
+            # A imagem exige PGDATA em um subdiretório quando o volume é montado em /var/lib/postgresql/data
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.username | quote }}, "-d", {{ .Values.postgres.database | quote }}]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.username | quote }}]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources: {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/postgresql/data
+            - name: migrations
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+      volumes:
+        - name: migrations
+          configMap:
+            name: {{ .Release.Name }}-migrations
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}

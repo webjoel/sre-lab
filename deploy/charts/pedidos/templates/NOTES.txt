@@ -1,0 +1,16 @@
+Release {{ .Release.Name }} instalada no namespace {{ .Release.Namespace }}.
+
+Estado da release:
+  make k8s-status
+
+Exponha a API em localhost:8080 (bloqueia o terminal):
+  make k8s-fwd
+
+Com o port-forward ativo, em OUTRO terminal:
+  make smoke        # cria um pedido e espera virar PAID
+  make k6           # carga: latência p95/p99 e taxa de erro
+  make k8s-queues   # profundidade das filas
+  make k8s-psql     # psql no Postgres
+
+Painel do RabbitMQ (usuário e senha: pedidos):
+  make k8s-fwd-rabbit

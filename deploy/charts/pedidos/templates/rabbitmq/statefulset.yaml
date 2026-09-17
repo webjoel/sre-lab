@@ -1,0 +1,64 @@
+# Instância única. Cluster de verdade (com quorum queues) vem na Fase 4 com o RabbitMQ Operator.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-rabbitmq
+  labels: {{- include "pedidos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rabbitmq
+spec:
+  serviceName: {{ .Release.Name }}-rabbitmq
+  replicas: 1
+  selector:
+    matchLabels: {{- include "pedidos.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: rabbitmq
+  template:
+    metadata:
+      labels: {{- include "pedidos.labels" . | nindent 8 }}
+        app.kubernetes.io/component: rabbitmq
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        fsGroup: 101
+      containers:
+        - name: rabbitmq
+          image: {{ .Values.rabbitmq.image }}
+          ports:
+            - name: amqp
+              containerPort: 5672
+            - name: management
+              containerPort: 15672
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: {{ .Values.rabbitmq.username | quote }}
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-credenciais
+                  key: RABBITMQ_PASSWORD
+          startupProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "ping"]
+            periodSeconds: 10
+            failureThreshold: 12
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "ping"]
+            periodSeconds: 30
+            timeoutSeconds: 15
+          resources: {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/rabbitmq
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.rabbitmq.storage }}

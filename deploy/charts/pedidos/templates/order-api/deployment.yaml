@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-order-api
+  labels: {{- include "pedidos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: order-api
+spec:
+  replicas: {{ .Values.orderApi.replicaCount }}
+  selector:
+    matchLabels: {{- include "pedidos.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: order-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels: {{- include "pedidos.labels" . | nindent 8 }}
+        app.kubernetes.io/component: order-api
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-order-api
+      automountServiceAccountToken: false
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {{- include "pedidos.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: order-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: order-api
+          image: "{{ .Values.orderApi.image }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.orderApi.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.orderApi.port | quote }}
+            - name: CHAOS_ENABLED
+              value: {{ .Values.orderApi.chaosEnabled | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-credenciais
+                  key: POSTGRES_PASSWORD
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-credenciais
+                  key: RABBITMQ_PASSWORD
+            - name: DATABASE_URL
+              value: {{ include "pedidos.databaseUrl" . | quote }}
+            - name: AMQP_URL
+              value: {{ include "pedidos.amqpUrl" . | quote }}
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 3
+            failureThreshold: 20
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+            failureThreshold: 2
+          resources: {{- toYaml .Values.orderApi.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

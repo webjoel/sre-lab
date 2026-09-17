@@ -10,6 +10,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Config struct {
@@ -46,22 +48,8 @@ func run() int {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	pool, err := connectDB(ctx, cfg.DatabaseURL)
-	if err != nil {
-		slog.Error("falha ao conectar no Postgres", "err", err)
-		return 1
-	}
-	defer pool.Close()
-
-	broker, err := connectBroker(ctx, cfg.AMQPURL)
-	if err != nil {
-		slog.Error("falha ao conectar no RabbitMQ", "err", err)
-		return 1
-	}
-	defer broker.Close()
-
 	chaos := &Chaos{}
-	app := &App{db: pool, broker: broker}
+	app := &App{}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", app.healthz)
@@ -82,25 +70,63 @@ func run() int {
 		IdleTimeout:       60 * time.Second,
 	}
 
+	// O servidor HTTP sobe ANTES de conectar em Postgres e RabbitMQ. Assim /healthz
+	// responde 200 desde o primeiro instante (o processo está vivo) e /readyz responde 503
+	// enquanto as dependências não estão prontas. Sem isso, a startup probe recebe
+	// "connection refused" e o Kubernetes não distingue "inicializando" de "morto".
 	serverErr := make(chan error, 1)
 	go func() {
-		slog.Info("order-api iniciada", "port", cfg.Port, "chaos_enabled", cfg.ChaosEnabled)
+		slog.Info("servidor HTTP iniciado", "port", cfg.Port, "chaos_enabled", cfg.ChaosEnabled)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErr <- err
 		}
 	}()
 
+	// Conecta nas dependências em background, com retry. Enquanto não terminar,
+	// a aplicação está viva mas não pronta.
+	depsReady := make(chan struct{})
+	depsFailed := make(chan error, 1)
+	go func() {
+		pool, err := connectDB(ctx, cfg.DatabaseURL)
+		if err != nil {
+			depsFailed <- err
+			return
+		}
+		broker, err := connectBroker(ctx, cfg.AMQPURL)
+		if err != nil {
+			pool.Close()
+			depsFailed <- err
+			return
+		}
+		app.setDeps(pool, broker)
+		slog.Info("dependências conectadas; aplicação pronta")
+		close(depsReady)
+	}()
+
 	exitCode := 0
-	select {
-	case <-ctx.Done():
-		slog.Info("sinal de encerramento recebido")
-	case err := <-serverErr:
-		slog.Error("servidor HTTP falhou", "err", err)
-		exitCode = 1
-	case amqpErr := <-broker.Closed():
-		// Design crash-only: sem reconexão elaborada; o orquestrador (Docker/Kubernetes) reinicia o processo.
-		slog.Error("conexão com RabbitMQ perdida", "err", amqpErr)
-		exitCode = 1
+	var brokerClosed <-chan *amqp.Error
+
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("sinal de encerramento recebido")
+		case err := <-serverErr:
+			slog.Error("servidor HTTP falhou", "err", err)
+			exitCode = 1
+		case err := <-depsFailed:
+			slog.Error("não foi possível conectar nas dependências", "err", err)
+			exitCode = 1
+		case <-depsReady:
+			// Passa a vigiar a conexão com o broker só depois que ela existe.
+			// Design crash-only: se cair, o processo encerra e o orquestrador reinicia.
+			brokerClosed = app.brokerClosed()
+			depsReady = nil // evita reentrar neste caso
+			continue
+		case amqpErr := <-brokerClosed:
+			slog.Error("conexão com RabbitMQ perdida", "err", amqpErr)
+			exitCode = 1
+		}
+		break
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -109,6 +135,7 @@ func run() int {
 		slog.Error("shutdown do servidor HTTP com erro", "err", err)
 		exitCode = 1
 	}
+	app.closeDeps()
 	slog.Info("order-api encerrada", "exit_code", exitCode)
 	return exitCode
 }

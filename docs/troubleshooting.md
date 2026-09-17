@@ -46,6 +46,37 @@ docker exec -it sre-lab-control-plane crictl ps
 docker exec -it sre-lab-control-plane journalctl -u kubelet -n 100
 ```
 
+## Inspecionando banco e filas (Fase 1, docker compose)
+
+```bash
+# Quantos pedidos em cada estado, e a janela de tempo de cada grupo
+docker exec sre-lab-apps-postgres-1 psql -U pedidos -d pedidos -c "
+SELECT status, count(*),
+       min(created_at)::time AS mais_antigo,
+       max(created_at)::time AS mais_recente
+FROM orders GROUP BY status;"
+
+# Psql interativo
+docker exec -it sre-lab-apps-postgres-1 psql -U pedidos -d pedidos
+
+# Profundidade das filas (orders.created = pendente de processar; orders.dead = DLQ)
+docker exec sre-lab-apps-rabbitmq-1 rabbitmqctl list_queues name messages
+
+# Acompanhar a fila crescer durante a carga (consumer lag em tempo real)
+watch -n2 'docker exec sre-lab-apps-rabbitmq-1 rabbitmqctl list_queues name messages'
+
+# Logs das aplicações (JSON estruturado)
+make app-logs
+```
+
+Painel do RabbitMQ: <http://localhost:15672> (usuário e senha `pedidos`). Nas mensagens da DLQ,
+o cabeçalho `x-death` mostra quantas vezes a mensagem falhou e por quê.
+
+## No cluster (Fase 2)
+
+Os mesmos diagnósticos, via Makefile: `make k8s-psql`, `make k8s-queues`, `make k8s-logs`,
+`make k8s-status`. Detalhes e exercícios de troubleshooting no Kubernetes em `fase2-kubernetes.md`.
+
 ## Exercícios (Fase 1)
 
 1. Suba as aplicações e descubra, pelo host, qual processo escuta a porta 8080 e quantos file descriptors ele tem abertos.

@@ -3,7 +3,7 @@
 Laboratório de SRE rodando localmente no Ubuntu: Kubernetes (kind), Terraform, GitOps, DevSecOps,
 observabilidade com SLOs e IA aplicada a operações.
 
-> Status: **Fases 0 e 1 concluídas** — próxima: Fase 2 (Kubernetes)
+> Status: **Fase 2 — Kubernetes**
 
 ## Pré-requisitos
 
@@ -59,88 +59,105 @@ make clean-tools ARGS=--apply # remove as antigas, pedindo confirmação
 
 ## Primeiros passos
 
+Uma vez por máquina:
+
 ```bash
-make host-setup          # ajusta inotify do Ubuntu para o kind (uma vez, pede sudo)
-cp .env.example .env     # coloque seu LOCALSTACK_AUTH_TOKEN
+make host-setup          # ajusta o inotify do Ubuntu para o kind (pede sudo)
 make hooks               # instala e atualiza os hooks do pre-commit
-make up                  # cria o cluster kind + LocalStack
-export KUBECONFIG=~/.kube/sre-lab
-kubectl get nodes
-make down                # destrói tudo
+make prereqs             # confere ferramentas, Docker, RAM e inotify
 ```
 
 `make help` lista todos os comandos.
 
-## Fase 1: rodando as aplicações
+## Fase 1 — Aplicações em containers
+
+O caminho mais curto para ver o lab funcionando. Não precisa de cluster.
 
 ```bash
 make go-tidy     # uma vez: gera o go.sum da order-api (ou 'go mod tidy' se tiver Go local)
-make app-up      # builda e sobe tudo em docker compose
+make app-up      # builda e sobe API, worker, Postgres e RabbitMQ em docker compose
 make smoke       # cria um pedido e espera virar PAID
 make k6-smoke    # teste de fumaça com k6
 make k6          # carga com k6: latência p95/p99 e taxa de erro
-make images      # compara tamanho das imagens Go vs Python
-make app-down
+make images      # compara o tamanho das imagens Go vs Python
+make app-down    # derruba e apaga os volumes
 ```
 
 Depois de um reboot, os containers ficam parados mas não somem: `docker compose start` religa sem
 rebuild. `make app-down` remove os volumes e zera o banco.
 
-Detalhes da API, do chaos e dos problemas intencionais em `apps/README.md`; testes de carga em `load/README.md`.
+**Onde está o quê:**
 
-### Injetando falhas (chaos)
-
-A API expõe um endpoint de injeção de falhas quando sobe com `CHAOS_ENABLED=true` (o padrão no compose).
-São dois comandos separados — um liga, outro normaliza:
-
-```bash
-curl localhost:8080/chaos                                                 # estado atual
-curl -X PUT localhost:8080/chaos -d '{"latency_ms":800,"error_rate":0.2}' # +800 ms e 20% de erro
-curl -X PUT localhost:8080/chaos -d '{"latency_ms":0,"error_rate":0}'     # volta ao normal
-```
-
-Exercício: rode `make k6` em um terminal e ligue o chaos em outro. Os thresholds passam a falhar (✗)
-e a distribuição de latência muda. Na Fase 7 isso vira gráfico e alerta de burn rate no Grafana.
-
-### Inspecionando banco e filas
-
-```bash
-# Quantos pedidos em cada estado, e a janela de tempo de cada grupo
-docker exec sre-lab-apps-postgres-1 psql -U pedidos -d pedidos -c "
-SELECT status, count(*),
-       min(created_at)::time AS mais_antigo,
-       max(created_at)::time AS mais_recente
-FROM orders GROUP BY status;"
-
-# Psql interativo
-docker exec -it sre-lab-apps-postgres-1 psql -U pedidos -d pedidos
-
-# Profundidade das filas (orders.created = pendente de processar; orders.dead = DLQ)
-docker exec sre-lab-apps-rabbitmq-1 rabbitmqctl list_queues name messages
-
-# Acompanhar a fila crescer durante a carga (consumer lag em tempo real)
-watch -n2 'docker exec sre-lab-apps-rabbitmq-1 rabbitmqctl list_queues name messages'
-
-# Logs das aplicações (JSON estruturado)
-make app-logs
-```
-
-Painel do RabbitMQ: <http://localhost:15672> (usuário e senha `pedidos`). Nas mensagens da DLQ,
-o cabeçalho `x-death` mostra quantas vezes a mensagem falhou e por quê.
-
-### Medições da linha de base (Fase 1)
-
-Primeira execução de `make k6` (10 VUs, 1 min), para servir de referência:
-
-| Métrica | Valor |
+| Assunto | Arquivo |
 |---|---|
-| `POST /orders` p95 | ~8,6 ms |
-| `POST /orders` p99 | ~10,7 ms |
-| `GET /orders/{id}` p95 | ~2,4 ms |
-| `http_req_failed` | 0,00% |
-| Pedidos criados em 90 s | ~1.345 (≈15/s) |
+| Rotas da API, injeção de falhas (chaos), decisões de design, problemas intencionais | `apps/README.md` |
+| Cenários de carga, thresholds, como ler a saída do k6 | `load/README.md` |
+| Diagnóstico: host, dentro de containers, banco e filas | `docs/troubleshooting.md` |
 
-**Três achados que viram exercício nas próximas fases:**
+## Fase 2 — Kubernetes
+
+Subir o cluster:
+
+```bash
+make up                  # cria o cluster kind via Terraform
+export KUBECONFIG=~/.kube/sre-lab
+kubectl get nodes
+make status              # nós, pods e consumo de memória
+make down                # destrói o cluster
+```
+
+Levar as aplicações para o cluster (chart Helm em `deploy/charts/pedidos`):
+
+```bash
+make k8s-lint            # valida o chart sem aplicar
+make k8s-up              # builda, carrega no kind e instala a release
+make k8s-status          # pods, services, PVCs e eventos
+make k8s-fwd             # expõe a API em localhost:8080 (bloqueia o terminal)
+make k8s-logs            # logs das aplicações
+make k8s-psql            # psql no Postgres do cluster
+make k8s-queues          # profundidade das filas
+make k8s-down            # remove a release (PVCs sobrevivem)
+```
+
+Decisões do chart, problemas intencionais e sete exercícios de troubleshooting em
+`docs/fase2-kubernetes.md`.
+
+O LocalStack só é necessário a partir da Fase 3 (Terraform criando recursos "AWS"). Quando chegar lá:
+`cp .env.example .env`, coloque o `LOCALSTACK_AUTH_TOKEN` (conta gratuita) e rode `make localstack-up`.
+
+### Medições
+
+Mesmo teste (`make k6`: 10 VUs, rampa + 1 min de patamar) nos dois ambientes:
+
+| Métrica | Fase 1 (docker compose) | Fase 2 (cluster, via port-forward) | Diferença |
+|---|---|---|---|
+| `POST /orders` p95 | 8,64 ms | 15,11 ms | +75% |
+| `POST /orders` p99 | 10,68 ms | 19,44 ms | +82% |
+| `GET /orders/{id}` p95 | 2,38 ms | 4,97 ms | +109% |
+| `http_req_failed` | 0,00% | 0,00% | — |
+| Vazão | 29,81 req/s | 29,83 req/s | — |
+| Pedidos criados em 90 s | 1.345 | 1.344 | — |
+
+**A vazão idêntica é o dado mais informativo da tabela.** Os dois ambientes pararam em ~29,8 req/s,
+o que significa que o teto veio do gerador de carga (10 VUs com think time), não da aplicação.
+Ou seja: mediu-se latência sob carga leve, e nenhum dos dois ambientes chegou perto de saturar.
+
+**Por que a latência dobrou no cluster.** Resistir à conclusão fácil de "Kubernetes é mais lento" —
+há quatro causas candidatas, e separá-las é o exercício:
+
+1. **port-forward**: túnel de processo único; o tráfego passa por kubectl → apiserver → kubelet → pod.
+   Principal suspeito. Testar sem o túnel, gerando carga de dentro do cluster:
+   ```bash
+   kubectl -n pedidos run k6-teste --rm -it --restart=Never \
+     --image=grafana/k6:latest --env BASE_URL=http://pedidos-order-api \
+     -- run - < load/baseline.js
+   ```
+2. **Rede do cluster**: CNI e kube-proxy adicionam saltos que não existem no compose.
+3. **`requests` de CPU baixos** (25m): podem limitar sob concorrência.
+4. **Tudo no mesmo nó**: os cinco pods competem pelos mesmos recursos (o control-plane tem taint
+   `NoSchedule`, então nada é agendado nele).
+
+### Achados que viram exercício nas próximas fases
 
 1. **Os thresholds atuais são frouxos.** O limite era p95 < 500 ms e a realidade foi 8,6 ms — a
    aplicação poderia ficar 50× mais lenta sem o teste reclamar. Na Fase 7 o número passa a vir do SLO.
@@ -152,6 +169,8 @@ Primeira execução de `make k6` (10 VUs, 1 min), para servir de referência:
    drenar. Isso é **consumer lag**, sem nenhum erro aparecer. Cuidado com a armadilha: `PREFETCH=10`
    não resolve — prefetch controla a entrega antecipada, não o paralelismo do consumidor.
    Na Fase 4 o KEDA passa a escalar o worker pelo tamanho da fila.
+4. **Medir com port-forward mede o port-forward também.** O método de medição faz parte do resultado;
+   comparar ambientes exige igualar o caminho até a aplicação.
 
 ## Plataforma (Fase 4)
 
@@ -176,9 +195,9 @@ Veja `docs/adr/`. A primeira decisão (ADR 0001) explica o dimensionamento para 
 
 | Fase | Tema | Status |
 |---|---|---|
-| 0 | Fundação: ferramentas, pre-commit, CI | concluída (cluster kind a validar com `make up`) |
+| 0 | Fundação: ferramentas, pre-commit, CI | concluída |
 | 1 | Aplicação e containers | concluída |
-| 2 | Kubernetes | — |
+| 2 | Kubernetes | em andamento |
 | 3 | Terraform (state remoto, LocalStack, bootstrap ArgoCD) | — |
 | 4 | Plataforma (Keycloak, Vault, Kyverno, Gateway API, CloudNativePG, KEDA) | — |
 | 5 | CI/CD e GitOps | — |

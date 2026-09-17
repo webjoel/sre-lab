@@ -30,10 +30,10 @@ host-setup: ## Ajusta o Ubuntu para o kind (inotify persistente; pede sudo)
 	@./scripts/host-setup.sh
 
 .PHONY: up
-up: prereqs cluster-up localstack-up status ## Sobe o ambiente completo da fase atual
+up: prereqs cluster-up status ## Sobe o cluster kind (LocalStack só a partir da Fase 3)
 
 .PHONY: down
-down: localstack-down cluster-down ## Destroi todo o ambiente
+down: localstack-down cluster-down ## Destrói o cluster (e o LocalStack, se estiver rodando)
 
 .PHONY: cluster-up
 cluster-up: ## Cria o cluster kind via Terraform
@@ -45,7 +45,7 @@ cluster-down: ## Remove o cluster kind via Terraform
 	terraform -chdir=$(TF_DIR) destroy -auto-approve -var="cluster_name=$(CLUSTER_NAME)"
 
 .PHONY: localstack-up
-localstack-up: ## Sobe o LocalStack (requer LOCALSTACK_AUTH_TOKEN no .env)
+localstack-up: ## Sobe o LocalStack — só necessário a partir da Fase 3 (requer .env)
 	@test -f .env || { echo "Crie o .env a partir do .env.example"; exit 1; }
 	docker compose -f docker-compose.localstack.yml --env-file .env up -d --wait
 
@@ -54,7 +54,7 @@ localstack-down: ## Para o LocalStack
 	-LOCALSTACK_AUTH_TOKEN=x docker compose -f docker-compose.localstack.yml down
 
 .PHONY: status
-status: ## Mostra nós, pods e consumo de memória
+status: ## Visão da MÁQUINA: nós, todos os pods, consumo de memória dos containers
 	@echo "== Nós =="; kubectl get nodes -o wide
 	@echo; echo "== Pods =="; kubectl get pods -A
 	@echo; echo "== Consumo dos containers (host) =="
@@ -74,11 +74,15 @@ hooks: ## Instala os hooks do pre-commit e atualiza as versões
 
 GO_IMAGE ?= golang:1.27
 
+# BASE_URL é o alvo dos testes (smoke, k6). No compose a API responde direto em localhost:8080;
+# no cluster é preciso um port-forward ativo (make k8s-fwd) apontando para a mesma porta.
+BASE_URL ?= http://localhost:8080
+
 # k6 em container: nada para instalar. --network host permite alcançar a API em localhost.
 K6_IMAGE ?= grafana/k6:latest
 VUS      ?= 10
 DURATION ?= 1m
-K6 = docker run --rm -i --network host -v "$(CURDIR)":/work -w /work -e BASE_URL=$${BASE_URL:-http://localhost:8080} $(K6_IMAGE)
+K6 = docker run --rm -i --network host -v "$(CURDIR)":/work -w /work -e BASE_URL=$(BASE_URL) $(K6_IMAGE)
 
 .PHONY: go-tidy
 go-tidy: ## Gera o go.sum da order-api (usa Go em container; não precisa de Go instalado)
@@ -99,17 +103,94 @@ app-logs: ## Acompanha os logs das aplicações
 	docker compose logs -f order-api payment-worker
 
 .PHONY: smoke
-smoke: ## Teste ponta a ponta: cria pedido e espera virar PAID
+smoke: ## Teste ponta a ponta (BASE_URL): cria pedido e espera virar PAID
 	@./scripts/smoke.sh
 
 .PHONY: k6-smoke
-k6-smoke: ## Teste de fumaça com k6 (rápido, valida o fluxo)
+k6-smoke: ## Fumaça com k6 (BASE_URL): 5 requisições, valida que a API responde
 	@$(K6) run /work/load/smoke.js
 
 .PHONY: k6
-k6: ## Carga com k6 (ex.: make k6 VUS=30 DURATION=3m)
+k6: ## Carga com k6 (BASE_URL); ex.: make k6 VUS=30 DURATION=3m
 	@$(K6) run -e VUS=$(VUS) -e DURATION=$(DURATION) /work/load/baseline.js
 
 .PHONY: images
 images: ## Compara o tamanho das imagens das aplicações
 	@docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep -E "REPOSITORY|sre-lab-apps"
+
+# ---------- Fase 2: Kubernetes ----------
+
+NAMESPACE ?= pedidos
+RELEASE   ?= pedidos
+CHART     := deploy/charts/pedidos
+IMAGE_TAG ?= dev
+
+.PHONY: k8s-build
+k8s-build: ## Builda as imagens e carrega no cluster kind (sem registry)
+	docker build -t sre-lab/order-api:$(IMAGE_TAG) apps/order-api
+	docker build -t sre-lab/payment-worker:$(IMAGE_TAG) apps/payment-worker
+	kind load docker-image sre-lab/order-api:$(IMAGE_TAG) sre-lab/payment-worker:$(IMAGE_TAG) --name $(CLUSTER_NAME)
+
+.PHONY: k8s-lint
+k8s-lint: ## Valida o chart (lint + render) sem aplicar nada
+	helm lint $(CHART)
+	helm template $(RELEASE) $(CHART) --namespace $(NAMESPACE) > /dev/null && echo "template OK"
+
+.PHONY: k8s-up
+k8s-up: k8s-build ## Instala/atualiza a release no cluster
+	helm upgrade --install $(RELEASE) $(CHART) \
+		--namespace $(NAMESPACE) --create-namespace \
+		--set image.tag=$(IMAGE_TAG) \
+		--wait --timeout 5m
+
+.PHONY: k8s-down
+k8s-down: ## Remove a release (PVCs sobrevivem; use k8s-purge para apagar tudo)
+	helm uninstall $(RELEASE) --namespace $(NAMESPACE) || true
+
+.PHONY: k8s-purge
+k8s-purge: k8s-down ## Remove a release, os PVCs e o namespace
+	kubectl delete pvc --all -n $(NAMESPACE) --ignore-not-found
+	kubectl delete namespace $(NAMESPACE) --ignore-not-found
+
+.PHONY: k8s-fwd
+k8s-fwd: ## Expõe a API do cluster em localhost:8080 — deixe rodando e use outro terminal
+	kubectl -n $(NAMESPACE) port-forward svc/$(RELEASE)-order-api 8080:80
+
+.PHONY: k8s-fwd-rabbit
+k8s-fwd-rabbit: ## Expõe o painel do RabbitMQ em localhost:15672
+	kubectl -n $(NAMESPACE) port-forward svc/$(RELEASE)-rabbitmq 15672:15672
+
+.PHONY: k8s-status
+k8s-status: ## Visão da RELEASE: pods, services, PVCs e eventos do namespace
+	@echo "== Pods =="; kubectl -n $(NAMESPACE) get pods -o wide
+	@echo; echo "== Services =="; kubectl -n $(NAMESPACE) get svc
+	@echo; echo "== PVCs =="; kubectl -n $(NAMESPACE) get pvc
+	@echo; echo "== Eventos (10 mais recentes) =="
+	@kubectl -n $(NAMESPACE) get events --sort-by=.lastTimestamp | tail -10
+
+.PHONY: k8s-logs
+k8s-logs: ## Logs das aplicações (todas as réplicas)
+	kubectl -n $(NAMESPACE) logs -l app.kubernetes.io/part-of=pedidos --all-containers --prefix -f --tail=50
+
+.PHONY: k8s-metrics
+k8s-metrics: ## Instala o metrics-server (necessário para kubectl top e HPA)
+	helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/ 2>/dev/null || true
+	helm repo update metrics-server
+	helm upgrade --install metrics-server metrics-server/metrics-server \
+		--namespace kube-system \
+		--set 'args={--kubelet-insecure-tls}' \
+		--wait
+	@echo "Aguardando primeira coleta..."; sleep 20; kubectl top nodes
+
+.PHONY: k8s-psql
+k8s-psql: ## psql interativo no Postgres do cluster
+	kubectl -n $(NAMESPACE) exec -it sts/$(RELEASE)-postgres -- psql -U pedidos -d pedidos
+
+.PHONY: k8s-queues
+k8s-queues: ## Profundidade das filas no RabbitMQ do cluster
+	kubectl -n $(NAMESPACE) exec sts/$(RELEASE)-rabbitmq -- rabbitmqctl list_queues name messages
+
+.PHONY: k8s-debug
+k8s-debug: ## Container efêmero com ferramentas de rede (POD=<nome do pod>)
+	@test -n "$(POD)" || { echo "uso: make k8s-debug POD=<nome do pod>"; exit 1; }
+	kubectl -n $(NAMESPACE) debug -it $(POD) --image=nicolaka/netshoot --target=order-api

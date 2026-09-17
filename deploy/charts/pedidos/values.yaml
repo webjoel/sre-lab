@@ -1,0 +1,68 @@
+# Valores padrão do chart. Sobrescreva por ambiente com -f deploy/envs/<env>.yaml
+
+nameOverride: ""
+
+image:
+  # Na Fase 2 as imagens vêm do build local via 'kind load'. Por isso pullPolicy IfNotPresent:
+  # com Always o kubelet tentaria buscar num registry e falharia (ErrImagePull).
+  tag: dev
+  pullPolicy: IfNotPresent
+
+orderApi:
+  replicaCount: 2
+  image: sre-lab/order-api
+  port: 8080
+  chaosEnabled: true
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      # Sem limite de CPU de propósito: limite de CPU causa throttling e latência de cauda.
+      # Memória tem limite porque não é compressível — estourar significa OOMKill.
+      memory: 128Mi
+  autoscaling:
+    enabled: false # requer metrics-server: make k8s-metrics
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+paymentWorker:
+  replicaCount: 1
+  image: sre-lab/payment-worker
+  healthPort: 8081
+  failRate: "0.05"
+  prefetch: "10"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 192Mi
+
+postgres:
+  image: postgres:16-alpine
+  database: pedidos
+  username: pedidos
+  # PROBLEMA INTENCIONAL: senha em texto claro no values, que vai para o Git.
+  # Fase 4 corrige com Vault + External Secrets Operator.
+  password: pedidos
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+rabbitmq:
+  image: rabbitmq:4-management-alpine
+  username: pedidos
+  password: pedidos
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 768Mi
