@@ -25,3 +25,57 @@ jobs:
           python-version: "3.12"
 
       - uses: pre-commit/action@v3.0.1
+
+  # Templates do Helm são excluídos do check-yaml do pre-commit (não são YAML válido
+  # antes de renderizados). Este job é quem os valida de fato.
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: azure/setup-helm@v4
+
+      - name: helm lint
+        run: helm lint deploy/charts/pedidos
+
+      - name: Renderiza e valida o YAML gerado
+        run: |
+          helm template pedidos deploy/charts/pedidos \
+            --namespace pedidos > /tmp/render.yaml
+          python -c "import yaml,sys; list(yaml.safe_load_all(open('/tmp/render.yaml'))); print('YAML renderizado OK')"
+
+      # kubeconform valida o YAML renderizado contra o schema real das APIs do Kubernetes:
+      # pega campo inexistente, apiVersion errada, tipo trocado — coisas que o helm lint não vê.
+      - name: Valida contra o schema do Kubernetes
+        run: |
+          KUBECONFORM_VERSION=v0.7.0
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz kubeconform
+          ./kubeconform -strict -summary -kubernetes-version 1.35.0 /tmp/render.yaml
+
+  go:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/order-api
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/order-api/go.mod
+          cache-dependency-path: apps/order-api/go.sum
+
+      # go vet encontra erros que compilam mas estão errados (printf com argumento
+      # trocado, lock copiado por valor, etc.)
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build -o /dev/null ./...
+
+      # Falha se go.mod/go.sum estiverem desatualizados em relação aos imports.
+      - name: go.mod está sincronizado?
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
