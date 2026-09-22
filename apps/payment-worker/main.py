@@ -8,6 +8,7 @@ import signal
 import sys
 import threading
 import time
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pika
@@ -120,10 +121,13 @@ def declare_topology(channel) -> None:
 
 def make_handler(db):
     def on_message(channel, method, properties, body) -> None:
+        # Valida tudo antes de tocar no banco. Uma exceção não tratada aqui derruba o processo
+        # sem ack, a mensagem volta para a fila e derruba o próximo pod: loop de poison message.
+        # Ex.: {"order_id": "abc"} faria o UPDATE lançar psycopg.DataError (uuid inválido).
         try:
             event = json.loads(body)
-            order_id = event["order_id"]
-        except (ValueError, KeyError):
+            order_id = str(uuid.UUID(event["order_id"]))
+        except (ValueError, KeyError, TypeError, AttributeError):
             log.error(
                 "mensagem inválida enviada para a DLQ",
                 extra={"fields": {"body": body[:200].decode(errors="replace")}},
