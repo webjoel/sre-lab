@@ -45,7 +45,7 @@ make clean-tools ARGS=--apply # remove as antigas, pedindo confirmação
 ### Versões testadas
 
 | Ferramenta | Versão |
-|---|---|
+| --- | --- |
 | Docker | Docker version 29.8.1, build 4a63305 |
 | Docker Compose | 5.5.1 |
 | Podman | podman version 4.9.3 |
@@ -72,7 +72,7 @@ make clean-tools ARGS=--apply # remove as antigas, pedindo confirmação
 | Checkov | não instalado |
 | Ollama | não instalado |
 | Ansible | ansible [core 2.16.3] |
-| yq | yq (https://github.com/mikefarah/yq/) version v4.53.6 |
+| yq | yq ([github.com/mikefarah/yq](https://github.com/mikefarah/yq/)) version v4.53.6 |
 | awslocal | não instalado |
 | terraform-docs | não instalado |
 | Vault CLI | não instalado |
@@ -115,7 +115,7 @@ rebuild. `make app-down` remove os volumes e zera o banco.
 **Onde está o quê:**
 
 | Assunto | Arquivo |
-|---|---|
+| --- | --- |
 | Rotas da API, injeção de falhas (chaos), decisões de design, problemas intencionais | `apps/README.md` |
 | Cenários de carga, thresholds, como ler a saída do k6 | `load/README.md` |
 | Diagnóstico: host, dentro de containers, banco e filas | `docs/troubleshooting.md` |
@@ -125,7 +125,7 @@ rebuild. `make app-down` remove os volumes e zera o banco.
 Primeira execução de `make k6` (10 VUs, 1 min), para servir de referência:
 
 | Métrica | Valor |
-|---|---|
+| --- | --- |
 | `POST /orders` p95 | ~8,6 ms |
 | `POST /orders` p99 | ~10,7 ms |
 | `GET /orders/{id}` p95 | ~2,4 ms |
@@ -204,7 +204,7 @@ Veja `docs/adr/`. A primeira decisão (ADR 0001) explica o dimensionamento para 
 ## Roadmap
 
 | Fase | Tema | Status |
-|---|---|---|
+| --- | --- | --- |
 | 0 | Fundação: ferramentas, pre-commit, CI | concluída |
 | 1 | Aplicação e containers | concluída |
 | 2 | Kubernetes | em andamento |
