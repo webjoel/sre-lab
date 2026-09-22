@@ -34,3 +34,21 @@ row "Helm"            helm version --template '{{.Version}}'
 row "k9s"             k9s version --short
 row "kubectx"         kubectx --version
 row "AWS CLI"         aws --version
+row "act"             act --version
+row "Trivy"           trivy --version
+row "Cosign"          cosign version
+row "Syft"            syft version
+row "kubeconform"     kubeconform -v
+row "Checkov"         checkov --version
+row "Ollama"          ollama --version
+row "Ansible"         ansible --version
+row "yq"              yq --version
+row "awslocal"        awslocal --version
+row "terraform-docs"  terraform-docs --version
+row "Vault CLI"       vault version
+row "Argo CD CLI"     argocd version --client
+row "Semgrep"         semgrep --version
+row "promtool"        promtool --version
+row "psql"            psql --version
+row "redis-cli"       redis-cli --version
+row "kcat"            kcat -V

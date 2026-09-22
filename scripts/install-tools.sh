@@ -8,7 +8,14 @@
 #   ./scripts/install-tools.sh podman       # Podman, skopeo e dive (build rootless e inspeção de imagem)
 #   ./scripts/install-tools.sh go           # Go (opcional; o build da API já roda em container)
 #   ./scripts/install-tools.sh fase2        # Helm, k9s, kubectx e kubens
-#   ./scripts/install-tools.sh fase3        # AWS CLI
+#   ./scripts/install-tools.sh fase3        # AWS CLI, awslocal e terraform-docs
+#   ./scripts/install-tools.sh fase4        # CLI do Vault
+#   ./scripts/install-tools.sh fase5        # act e CLI do Argo CD
+#   ./scripts/install-tools.sh fase6        # trivy, cosign, syft, checkov, kubeconform, semgrep
+#   ./scripts/install-tools.sh fase7        # promtool (valida regras e PromQL)
+#   ./scripts/install-tools.sh fase8        # clientes de banco e fila: psql, redis-cli, kcat
+#   ./scripts/install-tools.sh fase9        # Ollama (LLM local)
+#   ./scripts/install-tools.sh legado       # Ansible e Multipass (trilha opcional de VMs)
 #   ./scripts/install-tools.sh tudo         # todos os alvos acima
 #
 # Versões: por padrão instala a última estável. Para fixar, exporte a variável antes:
@@ -122,6 +129,8 @@ install_base() {
   sudo apt-get install -y -qq make git curl jq unzip ca-certificates gnupg pipx python3-venv
   ok "make, git, curl, jq, unzip, gnupg, pipx, python3-venv"
 
+  install_yq
+
   log "pre-commit (pipx)"
   if [[ "$FORCE" != "1" ]] && pipx list --short 2>/dev/null | grep -q '^pre-commit '; then
     ok "pre-commit já instalado via pipx"
@@ -160,6 +169,30 @@ install_troubleshoot() {
     sudo systemctl enable --now sysstat >/dev/null 2>&1 || true
     ok "coleta histórica do sysstat ativada (sar)"
   fi
+}
+
+# O pacote 'yq' do Ubuntu é um wrapper Python sobre o jq, com sintaxe diferente do yq
+# em Go (mikefarah), que é o usado na prática com Kubernetes e Helm. Instalamos o de Go.
+install_yq() {
+  log "yq (mikefarah, em Go — não o wrapper Python do apt)"
+  if [[ "$FORCE" != "1" ]] && command -v yq >/dev/null 2>&1 && yq --version 2>&1 | grep -qi mikefarah; then
+    ok "yq (Go) já instalado em $(command -v yq)"
+    return
+  fi
+  command -v yq >/dev/null 2>&1 && warn "yq existente não é o de Go; será substituído em $BIN_DIR"
+  need curl jq
+  local v="${YQ_VERSION:-$(latest_github_tag mikefarah/yq)}"
+  local base="https://github.com/mikefarah/yq/releases/download/$v"
+  curl -fsSLo "$TMP/yq" "$base/yq_linux_amd64"
+  # O arquivo 'checksums' tem várias colunas de hash; 'checksums_hashes_order' diz a ordem.
+  local idx sha
+  idx=$(curl -fsSL "$base/checksums_hashes_order" 2>/dev/null | grep -n '^SHA-256$' | cut -d: -f1 || true)
+  if [[ -n "$idx" ]]; then
+    sha=$(curl -fsSL "$base/checksums" 2>/dev/null | awk -v f="yq_linux_amd64" -v i="$idx" '$1==f {print $(i+1)}' || true)
+  fi
+  verify_sha256 "$TMP/yq" "${sha:-}"
+  sudo install -m 0755 "$TMP/yq" "$BIN_DIR/yq"
+  ok "yq $v"
 }
 
 install_kubectl() {
@@ -324,6 +357,204 @@ install_k9s() {
   ok "k9s $v"
 }
 
+
+# Baixa um .deb de release do GitHub, confere o checksum e instala.
+install_deb_from_github() {
+  local repo=$1 bin=$2 file_tpl=$3 sums_tpl=$4 ver_var=$5
+  local v="${!ver_var:-$(latest_github_tag "$repo")}"
+  local nov="${v#v}"
+  local file="${file_tpl//VER/$nov}" sums="${sums_tpl//VER/$nov}"
+  local base="https://github.com/$repo/releases/download/$v"
+  curl -fsSLo "$TMP/$file" "$base/$file"
+  verify_sha256 "$TMP/$file" "$(curl -fsSL "$base/$sums" 2>/dev/null | awk -v f="$file" '$2==f || $2=="./"f {print $1}' || true)"
+  sudo apt-get install -y -qq "$TMP/$file"
+  ok "$bin $v"
+}
+
+install_act() {
+  log "act — roda workflows do GitHub Actions localmente (Fase 5)"
+  need curl jq
+  already act && return
+  local v="${ACT_VERSION:-$(latest_github_tag nektos/act)}"
+  local base="https://github.com/nektos/act/releases/download/$v"
+  local file="act_Linux_x86_64.tar.gz"
+  curl -fsSLo "$TMP/$file" "$base/$file"
+  verify_sha256 "$TMP/$file" \
+    "$(curl -fsSL "$base/checksums.txt" 2>/dev/null | awk -v f="$file" '$2==f {print $1}' || true)"
+  tar -xzf "$TMP/$file" -C "$TMP" act
+  sudo install -m 0755 "$TMP/act" "$BIN_DIR/act"
+  ok "act $v"
+}
+
+install_trivy() {
+  log "Trivy — scan de vulnerabilidades (Fase 6)"
+  need curl jq
+  already trivy && return
+  install_deb_from_github aquasecurity/trivy trivy "trivy_VER_Linux-64bit.deb" "trivy_VER_checksums.txt" TRIVY_VERSION
+}
+
+install_cosign() {
+  log "Cosign — assinatura de imagens (Fase 6)"
+  need curl jq
+  already cosign && return
+  local v="${COSIGN_VERSION:-$(latest_github_tag sigstore/cosign)}"
+  local base="https://github.com/sigstore/cosign/releases/download/$v"
+  curl -fsSLo "$TMP/cosign" "$base/cosign-linux-amd64"
+  verify_sha256 "$TMP/cosign" \
+    "$(curl -fsSL "$base/cosign_checksums.txt" 2>/dev/null | awk '$2=="cosign-linux-amd64" {print $1}' || true)"
+  sudo install -m 0755 "$TMP/cosign" "$BIN_DIR/cosign"
+  ok "cosign $v"
+}
+
+install_syft() {
+  log "Syft — geração de SBOM (Fase 6)"
+  need curl jq
+  already syft && return
+  local v="${SYFT_VERSION:-$(latest_github_tag anchore/syft)}"
+  local nov="${v#v}"
+  local base="https://github.com/anchore/syft/releases/download/$v"
+  local file="syft_${nov}_linux_amd64.tar.gz"
+  curl -fsSLo "$TMP/$file" "$base/$file"
+  verify_sha256 "$TMP/$file" \
+    "$(curl -fsSL "$base/syft_${nov}_checksums.txt" 2>/dev/null | awk -v f="$file" '$2==f {print $1}' || true)"
+  tar -xzf "$TMP/$file" -C "$TMP" syft
+  sudo install -m 0755 "$TMP/syft" "$BIN_DIR/syft"
+  ok "syft $v"
+}
+
+install_kubeconform() {
+  log "kubeconform — valida manifests contra o schema do Kubernetes (Fase 6)"
+  need curl jq
+  already kubeconform && return
+  local v="${KUBECONFORM_VERSION:-$(latest_github_tag yannh/kubeconform)}"
+  local base="https://github.com/yannh/kubeconform/releases/download/$v"
+  local file="kubeconform-linux-amd64.tar.gz"
+  curl -fsSLo "$TMP/$file" "$base/$file"
+  verify_sha256 "$TMP/$file" \
+    "$(curl -fsSL "$base/CHECKSUMS" 2>/dev/null | awk -v f="$file" '$2==f {print $1}' || true)"
+  tar -xzf "$TMP/$file" -C "$TMP" kubeconform
+  sudo install -m 0755 "$TMP/kubeconform" "$BIN_DIR/kubeconform"
+  ok "kubeconform $v"
+}
+
+install_checkov() {
+  log "Checkov — scan de IaC (Fase 6)"
+  if [[ "$FORCE" != "1" ]] && pipx list --short 2>/dev/null | grep -q '^checkov '; then
+    ok "checkov já instalado via pipx"
+    return
+  fi
+  pipx install --force checkov
+  ok "checkov instalado em ~/.local/bin"
+}
+
+
+install_awslocal() {
+  log "awslocal — wrapper do AWS CLI apontando para o LocalStack (Fase 3)"
+  if [[ "$FORCE" != "1" ]] && pipx list --short 2>/dev/null | grep -q '^awscli-local '; then
+    ok "awslocal já instalado via pipx"
+    return
+  fi
+  pipx install --force awscli-local
+  ok "awslocal instalado em ~/.local/bin"
+}
+
+install_terraform_docs() {
+  log "terraform-docs — documentação automática de módulos (Fase 3)"
+  need curl jq
+  already terraform-docs && return
+  local v="${TERRAFORM_DOCS_VERSION:-$(latest_github_tag terraform-docs/terraform-docs)}"
+  local base="https://github.com/terraform-docs/terraform-docs/releases/download/$v"
+  local file="terraform-docs-$v-linux-amd64.tar.gz"
+  curl -fsSLo "$TMP/$file" "$base/$file"
+  verify_sha256 "$TMP/$file" \
+    "$(curl -fsSL "$base/terraform-docs-$v.sha256sum" 2>/dev/null | awk -v f="$file" '$2==f || $2=="./"f {print $1}' || true)"
+  tar -xzf "$TMP/$file" -C "$TMP" terraform-docs
+  sudo install -m 0755 "$TMP/terraform-docs" "$BIN_DIR/terraform-docs"
+  ok "terraform-docs $v"
+}
+
+install_vault_cli() {
+  log "CLI do Vault (repositório apt da HashiCorp, o mesmo do Terraform) — Fase 4"
+  already vault && return
+  if [[ ! -f /etc/apt/sources.list.d/hashicorp.list ]]; then
+    install_terraform   # configura o repositório assinado da HashiCorp
+  fi
+  sudo apt-get install -y -qq vault
+  ok "$(vault version 2>/dev/null | head -1)"
+}
+
+install_argocd_cli() {
+  log "CLI do Argo CD (Fase 5)"
+  need curl jq
+  already argocd && return
+  local v="${ARGOCD_VERSION:-$(latest_github_tag argoproj/argo-cd)}"
+  local base="https://github.com/argoproj/argo-cd/releases/download/$v"
+  curl -fsSLo "$TMP/argocd" "$base/argocd-linux-amd64"
+  verify_sha256 "$TMP/argocd" \
+    "$(curl -fsSL "$base/cli_checksums.txt" 2>/dev/null | awk '$2=="argocd-linux-amd64" {print $1}' || true)"
+  sudo install -m 0755 "$TMP/argocd" "$BIN_DIR/argocd"
+  ok "argocd $v"
+}
+
+install_semgrep() {
+  log "Semgrep — SAST (Fase 6)"
+  if [[ "$FORCE" != "1" ]] && pipx list --short 2>/dev/null | grep -q '^semgrep '; then
+    ok "semgrep já instalado via pipx"
+    return
+  fi
+  pipx install --force semgrep
+  ok "semgrep instalado em ~/.local/bin"
+}
+
+install_promtool() {
+  log "promtool — valida regras de alerta e expressões PromQL (Fase 7)"
+  need curl jq
+  already promtool && return
+  local v="${PROMETHEUS_VERSION:-$(latest_github_tag prometheus/prometheus)}"
+  local nov="${v#v}"
+  local base="https://github.com/prometheus/prometheus/releases/download/$v"
+  local file="prometheus-${nov}.linux-amd64.tar.gz"
+  curl -fsSLo "$TMP/$file" "$base/$file"
+  verify_sha256 "$TMP/$file" \
+    "$(curl -fsSL "$base/sha256sums.txt" 2>/dev/null | awk -v f="$file" '$2==f {print $1}' || true)"
+  tar -xzf "$TMP/$file" -C "$TMP" "prometheus-${nov}.linux-amd64/promtool"
+  sudo install -m 0755 "$TMP/prometheus-${nov}.linux-amd64/promtool" "$BIN_DIR/promtool"
+  ok "promtool $v"
+}
+
+install_clientes_dados() {
+  log "Clientes de banco e fila (Fase 8)"
+  # Úteis para consultar de fora do cluster (via port-forward), com histórico de comandos
+  # e autocomplete — melhor que 'kubectl exec' para trabalho de análise.
+  sudo apt-get update -qq
+  sudo apt-get install -y -qq postgresql-client redis-tools kcat
+  ok "psql, redis-cli, kcat"
+  warn "MongoDB: use 'kubectl exec' no pod (mongosh exige repositório próprio da MongoDB)"
+}
+
+install_ollama() {
+  log "Ollama — modelos de linguagem locais (Fase 9)"
+  already ollama && return
+  # Instalador oficial. Baixa o binário e cria o serviço systemd.
+  # Leia antes, se preferir: curl -fsSL https://ollama.com/install.sh | less
+  curl -fsSL https://ollama.com/install.sh | sh
+  ok "ollama instalado — baixe um modelo pequeno com: ollama pull <modelo>"
+}
+
+install_legado() {
+  log "Ansible e Multipass — trilha opcional de VMs e configuração"
+  if [[ "$FORCE" != "1" ]] && pipx list --short 2>/dev/null | grep -q '^ansible '; then
+    ok "ansible já instalado via pipx"
+  else
+    pipx install --force ansible
+    ok "ansible instalado em ~/.local/bin"
+  fi
+  if ! already multipass; then
+    sudo snap install multipass
+    ok "multipass"
+  fi
+}
+
 install_awscli() {
   log "AWS CLI v2 (instalador oficial da AWS)"
   need curl unzip
@@ -334,7 +565,7 @@ install_awscli() {
   ok "$(aws --version)"
 }
 
-usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; }
 
 nucleo() { install_base; install_gh; install_kind; install_kubectl; install_terraform; install_tflint; }
 
@@ -345,8 +576,19 @@ for alvo in "${@:-nucleo}"; do
     podman) install_podman ;;
     go)     install_go ;;
     fase2)  install_helm; install_k9s; install_kubectx ;;
-    fase3)  install_awscli ;;
-    tudo)   nucleo; install_troubleshoot; install_podman; install_go; install_helm; install_k9s; install_kubectx; install_awscli ;;
+    fase3)  install_awscli; install_awslocal; install_terraform_docs ;;
+    fase4)  install_vault_cli ;;
+    fase5)  install_act; install_argocd_cli ;;
+    fase6)  install_trivy; install_cosign; install_syft; install_kubeconform; install_checkov; install_semgrep ;;
+    fase7)  install_promtool ;;
+    fase8)  install_clientes_dados ;;
+    fase9)  install_ollama ;;
+    legado) install_legado ;;
+    tudo)   nucleo; install_troubleshoot; install_podman; install_go; install_helm; install_k9s
+            install_kubectx; install_awscli; install_act; install_trivy; install_cosign
+            install_syft; install_kubeconform; install_checkov; install_awslocal
+            install_terraform_docs; install_vault_cli; install_argocd_cli; install_semgrep
+            install_promtool; install_clientes_dados ;;
     -h|--help) usage; exit 0 ;;
     *) usage; die "alvo desconhecido: $alvo" ;;
   esac

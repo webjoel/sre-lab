@@ -7,15 +7,38 @@ ok()   { printf '  \033[32m✔\033[0m %s\n' "$1"; }
 warn() { printf '  \033[33m!\033[0m %s\n' "$1"; }
 fail() { printf '  \033[31m✘\033[0m %s\n' "$1"; FAILED=1; }
 
-echo "Ferramentas obrigatórias:"
-for bin in docker kind kubectl terraform tflint pre-commit jq curl make; do
+echo "Obrigatórias (Fases 0 e 1):"
+for bin in docker kind kubectl terraform tflint pre-commit git jq yq curl make; do
   if command -v "$bin" >/dev/null 2>&1; then ok "$bin"; else fail "$bin não encontrado"; fi
 done
 
-echo "Ferramentas das próximas fases:"
-for bin in gh go helm k9s kubectx aws act trivy cosign; do
-  if command -v "$bin" >/dev/null 2>&1; then ok "$bin"; else warn "$bin ainda não instalado (opcional agora)"; fi
-done
+# Próximas fases: ausência aqui é normal — cada uma se instala quando a fase chega.
+echo "Próximas fases (instale com: make tools ALVOS=\"<alvo>\"):"
+fase() {
+  local alvo=$1; shift
+  local faltando=()
+  for bin in "$@"; do
+    command -v "$bin" >/dev/null 2>&1 || faltando+=("$bin")
+  done
+  if ((${#faltando[@]} == 0)); then
+    ok "$alvo: completo"
+  else
+    warn "$alvo: falta ${faltando[*]}"
+  fi
+}
+
+fase "go (opcional)"            go
+fase "podman (opcional)"        podman skopeo dive
+fase "troubleshoot"             tmux htop lsof strace tcpdump dig openssl
+fase "fase2 (Kubernetes)"       helm k9s kubectx kubens
+fase "fase3 (Terraform/AWS)"    aws awslocal terraform-docs
+fase "fase4 (plataforma)"       vault
+fase "fase5 (CI/CD e GitOps)"   act argocd
+fase "fase6 (DevSecOps)"        trivy cosign syft kubeconform checkov semgrep
+fase "fase7 (observabilidade)"  promtool
+fase "fase8 (dados)"            psql redis-cli kcat
+fase "fase9 (IA)"               ollama
+fase "legado (opcional)"        ansible multipass
 
 echo "Docker:"
 if docker info >/dev/null 2>&1; then ok "daemon acessível sem sudo"; else fail "Docker parado ou usuário fora do grupo docker"; fi

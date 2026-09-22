@@ -28,7 +28,15 @@ make tools                    # base + núcleo: make, git, jq, gh, pre-commit, k
 make tools ALVOS="troubleshoot"  # diagnóstico do host: tmux, htop, sysstat, lsof, strace, tcpdump, dig...
 make tools ALVOS="podman"     # Podman, skopeo, buildah e dive (exercícios de container)
 make tools ALVOS="go"         # Go (opcional; o build da API roda em container)
-make tools ALVOS="fase2"      # Helm, k9s, kubectx e kubens, quando chegar na Fase 2
+make tools ALVOS="fase2"      # Helm, k9s, kubectx e kubens (Fase 2)
+make tools ALVOS="fase3"      # AWS CLI, awslocal, terraform-docs (Fase 3)
+make tools ALVOS="fase4"      # CLI do Vault (Fase 4)
+make tools ALVOS="fase5"      # act e CLI do Argo CD (Fase 5)
+make tools ALVOS="fase6"      # trivy, cosign, syft, checkov, kubeconform, semgrep (Fase 6)
+make tools ALVOS="fase7"      # promtool (Fase 7)
+make tools ALVOS="fase8"      # psql, redis-cli, kcat (Fase 8)
+make tools ALVOS="fase9"      # Ollama (Fase 9)
+make tools ALVOS="legado"     # Ansible e Multipass (trilha opcional)
 make versions                 # tabela de versões para registrar abaixo
 make clean-tools              # diagnostica versões antigas duplicadas (não remove nada)
 make clean-tools ARGS=--apply # remove as antigas, pedindo confirmação
@@ -41,8 +49,8 @@ make clean-tools ARGS=--apply # remove as antigas, pedindo confirmação
 | Docker | Docker version 29.8.1, build 4a63305 |
 | Docker Compose | 5.5.1 |
 | Podman | podman version 4.9.3 |
-| skopeo | não instalado |
-| dive | não instalado |
+| skopeo | skopeo version 1.13.3 |
+| dive | dive 0.13.1 |
 | kind | kind v0.33.0 go1.26.7 linux/amd64 |
 | kubectl | Client Version: v1.37.0 |
 | Terraform | Terraform v1.16.3 |
@@ -56,6 +64,24 @@ make clean-tools ARGS=--apply # remove as antigas, pedindo confirmação
 | k9s | Version              v0.51.0 |
 | kubectx | v0.0.0+unknown |
 | AWS CLI | não instalado |
+| act | não instalado |
+| Trivy | não instalado |
+| Cosign | não instalado |
+| Syft | não instalado |
+| kubeconform | não instalado |
+| Checkov | não instalado |
+| Ollama | não instalado |
+| Ansible | ansible [core 2.16.3] |
+| yq | yq (https://github.com/mikefarah/yq/) version v4.53.6 |
+| awslocal | não instalado |
+| terraform-docs | não instalado |
+| Vault CLI | não instalado |
+| Argo CD CLI | não instalado |
+| Semgrep | não instalado |
+| promtool | não instalado |
+| psql | psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) |
+| redis-cli | não instalado |
+| kcat | não instalado |
 
 ## Primeiros passos
 

@@ -18,16 +18,68 @@ uma das competências que separam SRE sênior de pleno.
 
 ## Instalação
 
-Imagem oficial `metabase/metabase`, via chart ou manifesto simples no perfil `dados`.
+Nada é instalado no host: o Metabase roda no cluster, como os demais serviços. Entra como uma
+Application do ArgoCD apontando para `platform/metabase/` (manifests próprios, não há chart oficial
+mantido pela Metabase), dentro do perfil `dados`.
 
-Dois cuidados:
+### Desenho
 
-- **Banco de metadados próprio.** Por padrão o Metabase usa H2 em arquivo, que corrompe fácil e não
-  sobrevive a restart de pod. No lab, aponte para um banco `metabase` separado no mesmo Postgres —
-  e note que isso cria uma dependência circular interessante: se o Postgres cair, você perde o
-  serviço **e** o painel que mostraria o estrago. Vale registrar como ADR.
-- **Usuário somente leitura.** O Metabase conecta no banco de pedidos com um usuário dedicado, sem
-  permissão de escrita. Consulta analítica mal escrita em tabela de produção derruba serviço.
+| Item | Decisão |
+|---|---|
+| Imagem | `metabase/metabase` (oficial), Deployment com 1 réplica |
+| Recursos | requests 512Mi, limits 1Gi |
+| Banco de metadados | Postgres dedicado (`MB_DB_TYPE=postgres`), no mesmo cluster CloudNativePG |
+| Acesso aos dados | usuário `metabase_ro`, somente SELECT |
+| Segredos | senhas via Vault + External Secrets, nunca no manifesto |
+| Probes | `startupProbe` generosa em `/api/health` |
+| Exposição | port-forward no início; HTTPRoute + Keycloak (OIDC) depois |
+
+### JVM em container: a armadilha do limite de memória
+
+O Metabase é uma aplicação Java, e **JVM com `limits.memory` é uma armadilha clássica**: se nada for
+dito, a JVM pode dimensionar o heap pela memória visível do nó, ignorar o cgroup e levar OOMKill —
+o pod morre sem log de erro da aplicação, só `Reason: OOMKilled` no estado do container.
+
+A correção é fazer a JVM respeitar o cgroup:
+
+```yaml
+env:
+  - name: JAVA_OPTS
+    value: "-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+```
+
+`MaxRAMPercentage` calcula o heap como fração do limite do container. `ExitOnOutOfMemoryError` faz o
+processo encerrar em vez de ficar vivo e inútil, para o Kubernetes reiniciá-lo (crash-only, como as
+aplicações do lab). Esse é um dos temas mais cobrados em entrevista quando há Java em Kubernetes.
+
+### Boot lento exige startupProbe
+
+Ele leva de 60 a 90 segundos para subir, porque é JVM e roda migrations no primeiro boot. Sem
+`startupProbe`, a liveness mata o pod antes de terminar, gerando um `CrashLoopBackOff` que parece
+erro de aplicação e não é. É o mesmo raciocínio do ADR 0002, agora aplicado a software de terceiros
+— com a diferença de que aqui não dá para corrigir o código: só resta ajustar a probe.
+
+```yaml
+startupProbe:
+  httpGet: { path: /api/health, port: http }
+  periodSeconds: 5
+  failureThreshold: 30     # até 150s para subir
+```
+
+### Banco de metadados próprio
+
+Por padrão o Metabase usa H2 em arquivo, que corrompe com facilidade e não sobrevive a restart de
+pod. No lab ele aponta para um banco `metabase` separado, no mesmo cluster CloudNativePG.
+
+Isso cria uma **dependência circular** que vale registrar como ADR: se o Postgres cair, você perde o
+serviço **e** o painel que mostraria o tamanho do estrago. Em produção, a análise costuma ficar em
+outra instância justamente por isso.
+
+Consequência prática, e ligação direta com o `disaster-recovery.md`: na edição open source, os
+dashboards e perguntas vivem nesse banco, não em arquivos versionados. **Seu trabalho no Metabase só
+está protegido se o backup desse banco estiver funcionando.**
+
+### Usuário somente leitura
 
 ```sql
 CREATE USER metabase_ro WITH PASSWORD '...';
@@ -37,8 +89,11 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO metabase_ro;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO metabase_ro;
 ```
 
-Consumo aproximado: 512 MB a 1 GB de RAM (é uma aplicação JVM). Por isso fica no perfil `dados`, e
-não sobe junto com a observabilidade completa.
+Consulta analítica mal escrita em tabela de produção derruba serviço — daí o exercício 2, e a
+correção do exercício 3 (apontar para a réplica de leitura).
+
+Consumo total aproximado: 512 MB a 1 GB. Por isso fica no perfil `dados`, e não sobe junto com a
+observabilidade completa.
 
 ## Painel sugerido: "Saúde do negócio"
 
@@ -65,6 +120,11 @@ falha" em "R$ 4.812 parados", que é a frase que faz a diretoria priorizar a cor
    É o argumento concreto para separar réplica de leitura de instância primária.
 3. **Réplica de leitura.** Aponte o Metabase para a réplica do CloudNativePG em vez do primário e
    repita o exercício 2. Compare o impacto.
-4. **SLI de negócio.** Defina o SLO de conversão de pedidos (por exemplo, 99% pagos em até 5 min) e
+4. **JVM e cgroup.** Suba o Metabase **sem** `JAVA_OPTS`, com `limits.memory: 1Gi`, e observe o
+   comportamento sob uso. Depois adicione `MaxRAMPercentage` e compare. Confirme o heap real:
+   ```bash
+   kubectl -n pedidos exec deploy/metabase -- java -XX:+PrintFlagsFinal -version | grep -i maxheap
+   ```
+5. **SLI de negócio.** Defina o SLO de conversão de pedidos (por exemplo, 99% pagos em até 5 min) e
    construa o mesmo indicador nas duas ferramentas: alerta de burn rate no Prometheus e painel no
    Metabase.
