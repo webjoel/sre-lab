@@ -1,0 +1,384 @@
+Administrar, sustentar e evoluir as plataformas de observabilidade da organização.
+Desenvolver e implementar estratégias de monitoramento para infraestrutura, aplicações, bancos de dados, redes, containers e serviços em nuvem.
+Administrar ambientes Zabbix, Grafana, Instana e demais ferramentas de observabilidade.
+Criar e manter templates, dashboards, mapas, alertas, indicadores e painéis executivos.
+Definir métricas, KPIs, SLIs e SLOs para acompanhamento da disponibilidade e desempenho dos serviços.
+Desenvolver integrações entre plataformas de observabilidade, sistemas corporativos e ferramentas de ITSM utilizando APIs e Webhooks.
+Desenvolver automações para provisionamento, coleta de métricas, geração de alertas e redução de atividades operacionais repetitivas.
+Atuar na análise de causa raiz (RCA) de incidentes relacionados à infraestrutura e aplicações.
+Apoiar equipes de Infraestrutura, Banco de Dados, Desenvolvimento, DevOps e Segurança na identificação e resolução de problemas.
+Administrar e realizar manutenção dos bancos de dados utilizados pelas plataformas de observabilidade, garantindo seu desempenho, disponibilidade e integridade.
+Participar da implantação de novos serviços garantindo aderência às boas práticas de observabilidade.
+Elaborar documentação técnica e disseminar boas práticas para as equipes.
+Participar de escalas de sobreaviso quando necessário.
+
+Conhecimento sólido em Linux e containers;
+Conhecimento em Kubernetes;
+Familiaridade com práticas de CI/CD;
+Interesse por automação, observabilidade e infraestrutura moderna;
+Capacidade analítica e boa resolução de problemas;
+Facilidade para atuar em ambientes dinâmicos e de alta complexidade;
+Interesse genuíno por tecnologia e aprendizado contínuo.
+Experiência com Ansible;
+Experiência com Jenkins;
+Conhecimento em Grafana e observabilidade;
+Vivência com cloud computing;
+Conhecimento em microserviços e ambientes distribuídos.
+
+Experiência em Nuvem: GCP, Azure e AWS (principalmente GCP);
+Experiência técnica com ecossistema de CI/CD e seus serviços (GitHub Actions e Argo CD);
+Conhecimentos em orquestração e contêineres para microserviços;
+Experiência em Kubernetes (k8s) gerenciado – GKE: arquitetura Kubernetes, HPA, deployments, services, ingress controller, configmaps, secrets, entre outros;
+Conhecimentos em redes e tecnologias como: Nginx, Ingress, CloudFlare, DNS, SSL, Load Balancers, VPNs, APNs, etc.;
+Experiência com Infraestrutura como Código (IaC) utilizando Terraform (ou similares);
+Conhecimento em desenvolvimento de automações para criação de ferramentas;
+Vivência com ferramentas de desenvolvimento: Git, code review, pull requests, CI/CD;
+Experiência em ferramentas de monitoramento e observabilidade: Loki Stack (Prometheus, Loki, Grafana) e Datadog.
+
+Experiência Prática: 1 a 2 anos de vivência em áreas de infraestrutura, suporte avançado a sistemas, DevOps ou desenvolvimento de software;
+Sistemas Operacionais: Boa familiaridade com ambientes Linux (comandos básicos, navegação, troubleshooting inicial), noções básicas de redes (TCP/IP, DNS, HTTP, troubleshooting básico;
+Cloud Computing: Conhecimento prático inicial nos serviços essenciais da AWS (EC2, S3, RDS, IAM) ou outra nuvem pública;
+Versionamento: Experiência com Git (commits, branches, pull requests);
+Contêineres: Compreensão da arquitetura de contêineres e experiência básica com Docker (criação e execução de imagens);
+Lógica de Programação: Capacidade de ler e editar scripts em Bash ou Python.
+
+Experiência sólida com serviços AWS: Amazon ECS (EC2/Fargate), EC2, EKS e RDS.
+Domínio de Infraestrutura como Código (IaC) utilizando Terraform e Ansible.
+Experiência com ferramentas de Observabilidade/APM (preferencialmente New Relic).
+Gestão avançada de servidores Linux.
+Experiência com bancos de dados relacionais (MySQL e PostgreSQL), incluindo tuning e resiliência.
+Vivência no contexto de Fintech (gateways de pagamento ou normas PCI-DSS).
+Troubleshooting avançado a nível de sistema operacional (Deep Dive Linux).
+Habilidade de desenvolvimento em Python, Go ou Shell Script.
+Experiência com esteiras de CI/CD (Gitlab CI/CD)
+
+Experiência prática em DevOps e Infraestrutura Cloud;
+Vivência com AWS (principal), CI/CD (GitHub Actions, GitLab CI ou similares) e pipelines de deploy;
+Conhecimento de Infraestrutura como Código (Terraform ou similar);
+Conhecimento em estratégias de deploy (Canary, Blue/Green);
+Experiência operando sistemas de produção com tráfego real;
+Compreensão de boas práticas de segurança em nuvem;
+Familiaridade com ferramentas de observabilidade e monitoramento;
+Perfil “mão na massa”, com autonomia e responsabilidade técnica.
+
+AWS (EKS, IAM, CloudWatch, ECR).
+API Gateways e governança de APIs (ex.: Kong).
+Helm e GitOps (ArgoCD/Flux).
+Validação automatizada de contratos de API em pipeline.
+
+Experiência sólida em Desenvolvimento Web;
+Experiência com metodologias ágeis, como Scrum ou Kanban;
+Experiência com práticas de integração e entrega contínuas e testes automatizados;
+Domínio de frameworks, bibliotecas e ferramentas, tais como Java, Python, JS, Ruby entre outros;
+Conhecimento de Arquitetura de Software, princípios e padrões de projetos;
+Conhecimento de estruturação de sistemas escaláveis, modulares e de alta performance;
+Habilidade de gerenciamento de conflitos, tomada de decisão, comunicação assertiva e visão estratégica.
+
+Provisionar e manter infra em cloud (Azure, AWS, GCP)
+Implementar arquiteturas com microsserviços e containers
+Gerenciar redes (DNS, Load Balancer, Firewall, vnets e vpn)
+Automatizar infraestrutura com IaC (Terraform, Ansible, Puppet)
+Construir e operar pipelines CI/CD (Azure devops, Git hub, ArgoCD)
+Trabalhar com containers (Docker) e orquestração (Kubernetes, OpenShift) Implementar e atuar no monitoramento e observabilidade (Prometheus, Grafana)
+Garantir segurança (SSL/TLS, hardening, DevSecOps e no ambientes Cloud)
+Trabalhar com mensageria e EDA.
+Apoiar aplicações e bancos de dados (SQL e NoSQL)
+Conhecimentos:Cloud: Azure / AWS Sistemas: Linux
+Containers: Docker, Kubernetes, OpenShift
+DevOps: GitHub Actions, ArgoCD, Azure DevopsIaC: Terraform - obrigatorio
+Observabilidade: Prometheus, Grafana Redes: DNS, Load Balancer, Firewall
+Desejável:Banco de dados: Azure sql
+Mensageria: Kafka, RabbitMQ
+
+Sólida experiência com operação/sustentação de ambientes críticos e alta disponibilidade;
+Domínio de AWS (serviços essenciais e arquitetura distribuída), com foco em: VPC / Redes; IAM; Load Balancer (ALB/NLB); CloudWatch (e serviços correlatos).
+Experiência com mensageria: RabbitMQ e/ou AmazonMQ (idealmente ambos);
+Conhecimento forte em rede (conceitos e prática em cloud): subnets, rotas, SG/NACL, DNS, conectividade e troubleshooting;
+Experiência com ferramentas de monitoramento/observabilidade (Datadog, Prometheus, OpenTelemetry, Zabbix, Grafana, CloudWatch);
+Forte habilidade em troubleshooting de infraestrutura, redes e sistemas em produção;
+Experiência com Linux;
+Conhecimentos em bancos de dados relacionais (MySQL, PostgreSQL) para apoio em análise e diagnóstico;
+Perfil de liderança técnica, proatividade e excelente comunicação para atuação em crise;
+Participação em projetos de automação, confiabilidade, observabilidade ou SRE;
+Vivência com governança de mudanças (GMUD/Change Management) e operação orientada a processos.
+
+Práticas de DevOps e Engenharia de Plataforma: Atuação prática e consistente (Hands-on) em DevOps e Engenharia de Plataforma.
+Infraestrutura como Código (IaC): Conhecimento prático em Terraform.
+Clouds Públicas: Domínio em AWS e/ou GCP.
+Ferramentas de CI/CD: Conhecimentos sólidos em ArgoCD, GitHub e GitHub Actions.
+Orquestração e Containers: Experiência prática e sólida com Kubernetes e Helm.
+Monitoramento e Observabilidade: Conhecimento em ferramentas como New Relic, Grafana, Zabbix, Prometheus e OpenTelemetry.
+Scripting/Programação: Habilidade para desenvolvimento de scripts e automações em Shell Script, Python, Golang ou TypeScript.
+
+Experiência em Gestão de Identidades e Acessos (IAM);
+Conhecimento em soluções Ping Identity (diferencial importante);
+Conhecimento em Observabilidade, com experiência em plataformas como Datadog, Elastic e Grafana;
+Boa capacidade de comunicação, acompanhamento de demandas e interação com equipes multidisciplinares.
+
+Experiência em Infraestrutura, Cloud ou Arquitetura.
+Vivência com Microsoft Azure em ambientes corporativos.
+Ensino superior completo em Ciência da Computação, Engenharia, Sistemas de Informação ou áreas correlatas.
+Experiência com Landing Zones e Governança Azure.
+Conhecimento avançado em Redes (VNet, VPN, ExpressRoute, DNS e Load Balancer).
+Infraestrutura como Código (Terraform obrigatório).
+Automação com PowerShell, Azure CLI ou Python.
+Implementação de segurança, compliance e observabilidade.
+Experiência em ambientes críticos de alta disponibilidade.
+Certificação Azure (AZ-104, AZ-305 ou AZ-500).
+
+Sólida experiência com AWS (ECS/Fargate, Lambda, ALB, EC2, RDS, ECR, IAM, VPC, S3, etc...).
+Conhecimento em Azure (Container Apps, Azure Functions, Azure Database for PostgreSQL, Blob Storage, Key Vault, etc...).
+Experiência com infraestrutura como código utilizando Terraform.
+Vivência com pipelines de CI/CD usando GitHub Actions.
+Experiência com containers e Docker.
+Experiência com ferramentas de observabilidade como Datadog: coleta de métricas, centralização de logs e criação de alertas.
+Conhecimento operacional de bancos de dados como PostgreSQL e MongoDB.
+Conhecimento em sistemas distribuídos e mensagerias como Kafka.
+Habilidade com automação e scripting (Python, Bash).
+Gerenciamento de repositórios de código-fonte (Git).
+Experiência com desenvolvimento assistido por IA.
+
+Experiência como Site Reliability Engineer, SRE ou função equivalente.
+Experiência prática com ambientes Cloud, utilizando GCP, AWS e/ou Azure.
+Conhecimento em Kubernetes e Docker.
+Experiência com observabilidade, monitoramento, alertas e APM.
+Conhecimento em métricas e práticas de SRE, como SLI, SLO, SLA, MTTR e MTTD.
+Experiência em gestão, investigação e resolução de incidentes.
+Conhecimento em troubleshooting de aplicações e infraestrutura.
+Experiência com administração de ambientes Linux.
+Conhecimento em redes, segurança, performance e alta disponibilidade.
+Experiência com automação e Infrastructure as Code.
+Vivência com pipelines de CI/CD.
+Boa comunicação e capacidade de atuar com times multidisciplinares.
+Perfil analítico, proativo, colaborativo e orientado à prevenção de problemas.
+
+Experiência consolidada como SRE, DevOps sênior ou tech lead de infraestrutura em ambiente SaaS de produção com carga relevante.
+PostgreSQL em profundidade — o requisito mais crítico. Análise de locks e gestão de conexões, tuning, pooling (PgBouncer), planos de execução, réplicas e estratégia de índices.
+Google Cloud Platform, incluindo Cloud SQL, dimensionamento de recursos (HPA/VPA) e gestão de custo;
+Experiência com GKE – Google Kubernetes Engine;
+Observabilidade e leitura de séries temporais para diagnóstico (Prometheus, Grafana, Loki, Opentelemetry);
+Gestão de incidentes com método: causa raiz, postmortem e disciplina de rollback;
+Experiência com IaC - Infraestrutura como código (Terraform);
+
+Experiência em condução de entregas end-to-end, desenvolvimento e/ou sustentação de sistemas corporativos.
+Domínio de SQL e modelagem de dados para análise e validação de regras de negócio.
+Repertório técnico sólido em integrações entre sistemas: APIs REST, contratos, versionamento, mensageria e padrões de integração.
+Conhecimento de ambientes em nuvem, infraestrutura e fundamentos de segurança da informação.
+Vivência com metodologias ágeis (Scrum / Kanban) e squads multidisciplinares.
+Forte capacidade de análise, resolução de problemas complexos e documentação técnica clara.
+Boa comunicação escrita e verbal, com capacidade de adaptar o discurso entre público técnico e público de negócio.
+Formação superior completa em Ciência da Computação, Sistemas de Informação, Engenharia de Software, Análise de Sistemas ou áreas correlatas.
+
+Experiência: Vivência prática prévia como SRE, DevOps Engineer ou equivalente, com experiência real em resposta a incidentes em produção (plantão/on-call).
+Orquestração Nuvem: Sólidos conhecimentos em Kubernetes, contêineres e infraestrutura em nuvem (AWS, GCP ou Azure).
+Práticas Modernas: Domínio de CI/CD, IaC, automação de ambientes e conceitos de Site Reliability Engineering (SLOs, Error Budget, redução de toil).
+Observabilidade Segurança: Familiaridade com ferramentas de monitoramento/telemetria e segurança em ambientes cloud-native.
+Perfil: Proatividade para investigação de problemas complexos e paixão por boas práticas de engenharia.
+
+8+ anos em infraestrutura, plataforma ou SRE.
+Kubernetes em produção: networking, autoscaling, gestão de recursos, troubleshooting real.
+IaC com Terraform (ou equivalente) e pipelines CI/CD maduros.
+Cloud pública em profundidade (AWS, Azure ou GCP).
+Programação para automação: Go ou Python.
+Stack de observabilidade (Prometheus/Grafana, OpenTelemetry, Datadog, New Relic ou similar).
+Experiência conduzindo incidentes de severidade alta.
+
+Experiência sólida com Kubernetes em produção (EKS ou equivalente) — deploy, troubleshooting, autoscaling e segurança (RBAC de users, groups e service accounts);
+Conhecimento prático de AWS: IAM, EC2, EKS, ECR, VPC, S3, RDS, CloudTrail;
+Experiência com GitHub Actions para CI/CD — workflows reutilizáveis, OIDC, pipelines de deploy;
+Familiaridade com Helm e/ou Kustomize para gerenciamento de releases no Kubernetes;
+Noção de Terraform — não precisa ser expert, mas sabe ler, escrever e propor módulos;
+Experiência com ferramentas de observabilidade como Datadog, Prometheus ou Grafana;
+Entendimento de segurança em cloud: IAM, políticas de rede, hardening de cluster, gestão de segredos;
+Boa comunicação com times de desenvolvimento — sabe contextualizar impacto técnico em termos de negócio;
+Autonomia para investigar problemas em produção e conduzir postmortems;
+Adoção natural de IA como ferramenta no dia a dia técnico.
+
+Cloud Platforms: Expertise profunda em pelo menos uma (AWS, Azure ou GCP). Domínio de compute, storage, networking e security services;
+Kubernetes: Experiência em produção com EKS, AKS ou GKE. Manifests YAML, networking, autoscaling, helm charts;
+Infrastructure as Code: Proficiência em Terraform ou CloudFormation. Modularização, versionamento, state management;
+CI/CD Pipelines: Design e implementação com GitHub Actions, GitLab CI ou Jenkins;
+Docker & Containerização: Build, otimização e deploy de imagens Docker. Docker registry management;
+Linux: Administração profundo de Linux (Red Hat, Ubuntu). Shell scripting (Bash), package management, system hardening;
+Observability: Implementação de Prometheus, Grafana ou ferramentas equivalentes (CloudWatch, Application Insights)
+Scripting: Python ou Bash para automação de tarefas operacionais.
+
+Experiência em recursos Cloud: AWS DynamoDB, AWS RDS SQL Server, EKS, ECS, ECR;
+Experiência com alta disponibilidade com AlwaysOn, Multi-AZ e Read replica;
+Conhecimento profundo em AWS RDS e instâncias EC2 voltadas para bancos de dados;
+Experiência comprovada com AWS EKS e ECS, incluindo configuração, troubleshooting e otimização;
+Domínio em infraestrutura como código (IaC) com Terraform e CloudFormation;
+Habilidade em automação de processos com Shell Script e Python;
+Experiência com ferramentas de monitoramento e observabilidade com Dynatrace;
+Familiaridade com aplicações .NET e Node.js, incluindo logs, erros e otimização de runtime;
+Administração e troubleshooting de infra AWS, incluindo EC2, VPC, e Load Balancers
+
+Minimum of 7 years of experience as a SRE or Software Engineer.
+Interest in applied AI — understanding models, costs, observability, and use cases.
+Solid experience with Infrastructure as Code (IaC) and platform tools such as Kubernetes (K8s), containers, Vault, and API Ingress.
+Deep understanding of software engineering fundamentals, including version control, testing, deploy automation, code review, and technical design documentation.
+Strong knowledge of modern CI/CD processes (Continuous Integration and Continuous Delivery/Deployment).
+Proven track record of building software and systems architecture completely from scratch.
+Experience handling high-scale, performance challenges and a deep understanding of distributed systems.
+Solid knowledge of database modeling, structuring, and evolution.
+Strong hands-on experience with agile methodologies like Kanban or Scrum.
+Professional proficiency in both Portuguese and English
+
+Experiência em desenvolvimento com Java e Spring (Spring Boot, APIs REST) Gradle é diferencial;
+Conhecimento de cloud computing AWS (ECS, RDS, IAM, SQS, S3, Secrets Manager);
+Experiência com containers (Docker) e com aplicações em ambientes orquestrados (ECS Fargate);
+Vivência com Infraestrutura como Código (OpenTofu/Terraform);
+Experiência com CI/CD no GitHub Actions (workflows reutilizáveis, automação de pipelines);
+Familiaridade com ambientes Linux;
+Versionamento com Git, Conventional Commits e práticas de revisão de código.
+
+Vivência em serviços AWS.
+Conhecimento em ferramentas de observabilidade baseadas no framework Open Telemetry e ferramentas proprietárias, como New Relic, Data Dog, DynaTrace, etc.
+Sólido entendimento de arquiteturas distribuídas, Event Driven Architecture e gerenciamento de filas.
+Experiência em gestão de custos, FinOps e acompanhamento de orçamentos relacionados aos custos de ferramentas e serviços de Cloud.
+Familiaridade com ambientes Linux e Windows.
+Conhecimento em bancos de dados (PostgreSQL, MySQL, Redis e bancos não relacionais)
+
+experiência consolidada em site reliability engineering incluindo desenho de sistemas resilientes definição de slis e slos automação de rotinas e gestão de incidentes
+experiência em liderança de time com foco em gestão de pessoas coordenação de prioridades acompanhamento de desempenho e promoção de ambiente colaborativo
+vivência em desenvolvimento de software com domínio de boas práticas de engenharia integração e entrega contínua e colaboração estreita com equipes de produto
+conhecimento sólido em administração de sistemas e infraestrutura englobando sistemas operacionais redes bancos de dados e ambientes cloud
+formação em áreas de tecnologia como ciência da computação engenharia de software ou similares conhecimento em segurança da informação experiência com ferramentas de observabilidade e automação fluência em inglês será considerada diferencial
+
+Experiência com Kubernetes, Docker e Helm em ambientes produtivos;
+Experiência com OpenShift;
+Conhecimento em construção e manutenção de pipelines de CI/CD;
+Experiência com Jenkins, Argo CD e GitLab CI;
+Conhecimento em automação de infraestrutura utilizando Ansible e Shell Script;
+Experiência com ambientes baseados em containers;
+Conhecimento em bancos de dados PostgreSQL, MongoDB e Redis;
+Conhecimento em segurança de aplicações e infraestrutura, incluindo OAuth, JWT e certificados digitais;
+Experiência com ambientes de alta disponibilidade e suporte a aplicações em produção;
+Vivência com metodologias ágeis (Scrum).
+
+Azure DevOps (pipelines, repos, boards)
+Kubernetes / GKE (deploy, scaling, gerenciamento de clusters)
+ArgoCD e práticas de GitOps
+GCP e Azure (ambientes de produção)
+Desejável: Terraform ou outra ferramenta de IaC
+Desejável: observabilidade (Prometheus, Grafana, Datadog)
+
+10+ anos de experiência em SRE/DevOps/Infraestrutura, com histórico comprovado de liderar iniciativas técnicas de grande escala e impacto cross-team;
+Experiência em Nuvem: GCP, Azure e AWS (principalmente GCP);
+Experiência técnica com ecossistema de CI/CD e seus serviços (GitHub Actions e Argo CD);
+Conhecimentos avançados em orquestração e contêineres para microserviços;
+Experiência sólida em Kubernetes (k8s) gerenciado – GKE: arquitetura Kubernetes, HPA, deployments, services, ingress controller, configmaps, secrets, entre outros;
+Conhecimentos em redes e tecnologias como: Nginx, Ingress, CloudFlare, DNS, SSL, Load Balancers, VPNs, APNs, etc.;
+Experiência avançada com Infraestrutura como Código (IaC) utilizando Terraform (ou similares), incluindo governança e padronização de módulos;
+Conhecimento em desenvolvimento de automações para criação de ferramentas de plataforma;
+Vivência com ferramentas de desenvolvimento: Git, code review, pull requests, CI/CD;
+Experiência em ferramentas de monitoramento e observabilidade: Loki Stack (Prometheus, Loki, Grafana) e Datadog;
+Boa comunicação com stakeholders técnicos e não-técnicos, com capacidade de influenciar decisões sem autoridade formal de gestão.
+
+Production Infrastructure Experience: Significant experience designing, operating, and troubleshooting production infrastructure in regulated or compliance-focused environments such as HIPAA, SOC 2, GDPR, or equivalent.
+Kubernetes Expertise: Deep hands-on experience running Kubernetes in production, including cluster operations, workload management, troubleshooting, scaling, and reliability engineering.
+Multi-Cloud Expertise: Strong practical experience with both AWS and GCP, including the ability to operate across providers and understand the architectural and operational tradeoffs of each.
+Infrastructure as Code: Proven production experience with Infrastructure as Code, particularly Pulumi and/or Terraform, including writing, reviewing, deploying, and maintaining infrastructure configurations.
+Observability and Reliability: Strong experience building monitoring, alerting, logging, tracing, and incident-response systems that support highly reliable production environments.
+Security and Compliance: Understanding of infrastructure security controls, compliance requirements, audit readiness, and the operational practices required to maintain regulated environments.
+Incident Management: Demonstrated ability to troubleshoot complex production issues under pressure, lead incident resolution, identify root causes, and implement durable corrective actions.
+Hands-On Mindset: Currently or recently working directly with production infrastructure and engineering systems, with a strong preference for candidates who continue to make hands-on technical contributions.
+Technical Leadership: Ability to define infrastructure standards, make high-impact architectural decisions, communicate technical tradeoffs clearly, and influence engineering practices without relying on formal people management.
+Problem-Solving: Strong analytical and troubleshooting skills, with a pragmatic approach to reliability, scalability, security, and operational excellence.
+
+Experiência sólida como SRE ou DevOps, com vivência real de produção.
+Azure no dia a dia.
+Terraform e prática de infraestrutura como código.
+Kubernetes.
+CI/CD, de preferência com Azure Pipelines.
+Automação.
+Observabilidade com New Relic.
+Python e Kotlin para automações e leitura de código
+
+Conhecimento de nível especialista em arquitetura de segurança AWS, incluindo AWS Organizations, IAM Identity Center, SCPs, permission boundaries, IAM Access Analyzer, padrões de Landing Zone, CloudTrail, GuardDuty, Security Hub, Config, Inspector, Macie, KMS, Secrets Manager, WAF, Shield, CloudFront, Route 53, VPC, Transit Gateway, PrivateLink, EventBridge, Security Lake e logging centralizado.
+Experiência profunda com IAM, incluindo least privilege, acesso federado, credenciais temporárias, JIT/JEA, workload identity, governança de acesso privilegiado, revisões de acesso, desenho de políticas e remediação de roles superprivilegiadas.
+Experiência avançada em segurança de Kubernetes e containers, especialmente AWS/EKS, incluindo EKS, ECR, Helm, IRSA/pod identity, RBAC, admission controllers, OPA/Gatekeeper, Kyverno, políticas de rede, gestão de segredos, image scanning, runtime security e isolamento de workloads.
+Conhecimento avançado de segurança de redes em cloud, incluindo desenho de VPC, roteamento, segmentação, controles de entrada e saída, security groups, NACLs, DNS, TLS/mTLS, WAF, proteção contra DDoS, CloudFront, service mesh, API gateways, análise de pacotes e logs e redução de movimentação lateral.
+Experiência sólida com arquitetura segura, threat modeling, detecção e resposta em cloud, proteção de dados, gestão de vulnerabilidades, CNAPP/CSPM, policy as code, detection as code, Terraform, CI/CD, Python, Go, Bash e automação reutilizável de segurança.
+Capacidade de liderar discussões técnicas, influenciar sem autoridade formal, comunicar riscos com clareza, construir consenso entre múltiplos times e equilibrar profundidade em segurança com velocidade de negócio.
+
+Experiência sólida com desenvolvimento de software e lógica de programação
+Domínio prático de pelo menos uma linguagem: Java, Kotlin, Python, JavaScript/TypeScript ou Golang
+Conhecimento profundo de APIs REST, webhooks e integrações entre sistemas
+Experiência com troubleshooting técnico em ambientes produtivos críticos
+Familiaridade com logs, métricas, observabilidade e sistemas distribuídos
+Vivência trabalhando diretamente com clientes enterprise ou estratégicos
+Forte capacidade de comunicação técnica com engenheiros e executivos
+Perfil analítico, hands-on e proativo na resolução de problemas complexos
+Habilidade para traduzir problemas técnicos em impacto de negócio
+Capacidade de conduzir múltiplas frentes simultaneamente com organização
+
+Superior completo em Ciência da Computação, Engenharia, TI ou áreas correlatas.
+Certificações em Cloud (AWS) ou Segurança da Informação são um diferencial.
+Vivência sólida em gestão de times de infraestrutura e/ou segurança da informação.
+Histórico de atuação em ambientes de crescimento acelerado e alta escala.
+Experiência prática com arquitetura de infraestrutura em nuvem (AWS).
+Histórico de entregas relacionadas à automação de processos de infraestrutura.
+Vivência conduzindo gestão de pessoas de forma próxima (1:1s, PDIs, desenvolvimento de time).
+Arquitetura de infraestrutura em AWS.
+Automação de infraestrutura (Infrastructure as Code).
+Práticas de segurança da informação e gestão de riscos.
+Monitoramento, observabilidade e resposta a incidentes.
+Gestão de custos em ambientes cloud (FinOps).
+Metodologias ágeis aplicadas à gestão de times técnicos.
+
+Solid professional experience with Docker and Kubernetes, including troubleshooting, cluster management, and scalability.
+Practical experience with Infrastructure as Code using Terraform and/or Ansible, including environment segregation and automation.
+Hands-on experience with AWS and/or GCP cloud services, including VPC, IAM, load balancers, S3, RDS, configuration, and automation practices.
+Knowledge of networking concepts and technologies, including firewall configuration, access controls, and network policies.
+Intermediate to advanced Python skills for operational automation and scripting.
+Intermediate Linux administration skills, including server management and network troubleshooting.
+Familiarity with access-management best practices, user administration, and least-privilege principles.
+Experience with CI/CD in highly available environments is a strong advantage.
+Knowledge of monitoring and observability tools such as Prometheus, Grafana, or similar platforms is desirable.
+Experience administering and optimizing SQL and NoSQL databases is a plus.
+Familiarity with Keycloak for authentication and identity management is beneficial.
+Experience administering Java-based solutions such as Apache NiFi is an advantage.
+Strong problem-solving, collaboration, and communication skills, with a proactive approach to reliability and operational challenges.
+
+Experiência Prática Consistente: Bagagem anterior atuando como SRE, DevOps ou Engenheiro(a) de Infraestrutura, demonstrando capacidade de entrega contínua de alto nível.
+Domínio de Kubernetes: Conhecimento sólido em gerenciamento de pods, troubleshoot diário de workloads, Helm Charts e ciclo de vida de containers.
+Vivência em Cloud (GCP): Experiência de mercado com os principais serviços da Google Cloud Platform.
+Cultura de Automação: Prática no desenvolvimento de IaC com Terraform e habilidade para escrever scripts utilitários em Python ou Golang.
+Foco em Entrega Contínua (CI/CD): Familiaridade com pipelines de integração e entrega contínua, utilizando ferramentas como Argo CD e Bitbucket.
+Mente de Observabilidade: Prática na configuração de métricas, alertas e painéis utilizando Prometheus e Grafana.
+Habilidade de Colaboração (Soft Skills): Boa comunicação para atuar de forma cross-functional com desenvolvedores, facilitando a cultura de qualidade e entrega segura.
+
+Monitoramento de ambientes (Zabbix, Dynatrace, Grafana)
+EKS/Docker/Kubernetes
+Azure DevOps/ Ansible/ Chef Automate
+Ferramentas ITSM
+Analítico
+Noções de redes (TCP/IP, VLAN, Firewall)
+Cloud Logging
+Cloud Monitoring
+Cloud SQL
+Compute Engine
+ITIL Foundation
+Fundamentos de Linux e Windows
+Conceitos básicos de troubleshooting de rede
+Conhecimentos básicos em containers e Kubernetes (GKE)
+Google Cloud (Fundamentals ou Associate)
+Noções de redes e conectividade
+Cloud Storage
+Gestão de incidentes (P2, P3, P4)
+Automação de ambientes cloud
+RCA (Root Cause Analysis)
+Troubleshooting estruturado
+Monitoramento e observabilidade
+Infrastructure as Code (IaC)
+
+Experiência sólida com a plataforma de serviço de computação em nuvem AWS;
+Experiência com comandos Linux e troubleshooting de infraestrutura;
+Experiência com contêineres Docker, configuração e aprimoramento de Dockerfiles;
+Experiência com ferramentas de automação (Ansible, Chef, Puppet, ou similares);
+Conhecimentos de infraestrutura como código (Terraform, CloudFormation);
+Experiência em scripts e programação (Bash, Python, etc);
+Conhecimentos sobre implementação e gestão de pipelines de CI (GitHub Actions);
+Experiência com ferramentas e gestão de ambientes em GitOps (ArgoCD); e
+Conhecimento de sistemas de monitoramento e logging (Datadog, New Relic, Grafana, Graylog, etc).

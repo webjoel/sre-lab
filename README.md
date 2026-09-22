@@ -94,6 +94,31 @@ rebuild. `make app-down` remove os volumes e zera o banco.
 | Cenários de carga, thresholds, como ler a saída do k6 | `load/README.md` |
 | Diagnóstico: host, dentro de containers, banco e filas | `docs/troubleshooting.md` |
 
+### Medições da linha de base (Fase 1)
+
+Primeira execução de `make k6` (10 VUs, 1 min), para servir de referência:
+
+| Métrica | Valor |
+|---|---|
+| `POST /orders` p95 | ~8,6 ms |
+| `POST /orders` p99 | ~10,7 ms |
+| `GET /orders/{id}` p95 | ~2,4 ms |
+| `http_req_failed` | 0,00% |
+| Pedidos criados em 90 s | ~1.345 (≈15/s) |
+
+**Três achados que viram exercício nas próximas fases:**
+
+1. **Os thresholds atuais são frouxos.** O limite era p95 < 500 ms e a realidade foi 8,6 ms — a
+   aplicação poderia ficar 50× mais lenta sem o teste reclamar. Na Fase 7 o número passa a vir do SLO.
+2. **A taxa de erro de 0% engana.** O worker falha de propósito em ~5% e manda para a DLQ, deixando o
+   pedido em `PENDING` — e o k6 não vê nada, porque a API respondeu 201. "A API respondeu" não é
+   "o pedido foi processado": é a diferença entre SLI técnico e SLI de negócio.
+3. **O worker não acompanha a vazão da API.** A API cria ~15 pedidos/s; o worker processa ~5,7/s
+   (50–300 ms por mensagem, um de cada vez). A fila acumula durante o teste e leva minutos para
+   drenar. Isso é **consumer lag**, sem nenhum erro aparecer. Cuidado com a armadilha: `PREFETCH=10`
+   não resolve — prefetch controla a entrega antecipada, não o paralelismo do consumidor.
+   Na Fase 4 o KEDA passa a escalar o worker pelo tamanho da fila.
+
 ## Fase 2 — Kubernetes
 
 Subir o cluster:
@@ -125,62 +150,21 @@ Decisões do chart, problemas intencionais e sete exercícios de troubleshooting
 O LocalStack só é necessário a partir da Fase 3 (Terraform criando recursos "AWS"). Quando chegar lá:
 `cp .env.example .env`, coloque o `LOCALSTACK_AUTH_TOKEN` (conta gratuita) e rode `make localstack-up`.
 
-### Medições
-
-Mesmo teste (`make k6`: 10 VUs, rampa + 1 min de patamar) nos dois ambientes:
-
-| Métrica | Fase 1 (docker compose) | Fase 2 (cluster, via port-forward) | Diferença |
-|---|---|---|---|
-| `POST /orders` p95 | 8,64 ms | 15,11 ms | +75% |
-| `POST /orders` p99 | 10,68 ms | 19,44 ms | +82% |
-| `GET /orders/{id}` p95 | 2,38 ms | 4,97 ms | +109% |
-| `http_req_failed` | 0,00% | 0,00% | — |
-| Vazão | 29,81 req/s | 29,83 req/s | — |
-| Pedidos criados em 90 s | 1.345 | 1.344 | — |
-
-**A vazão idêntica é o dado mais informativo da tabela.** Os dois ambientes pararam em ~29,8 req/s,
-o que significa que o teto veio do gerador de carga (10 VUs com think time), não da aplicação.
-Ou seja: mediu-se latência sob carga leve, e nenhum dos dois ambientes chegou perto de saturar.
-
-**Por que a latência dobrou no cluster.** Resistir à conclusão fácil de "Kubernetes é mais lento" —
-há quatro causas candidatas, e separá-las é o exercício:
-
-1. **port-forward**: túnel de processo único; o tráfego passa por kubectl → apiserver → kubelet → pod.
-   Principal suspeito. Testar sem o túnel, gerando carga de dentro do cluster:
-   ```bash
-   kubectl -n pedidos run k6-teste --rm -it --restart=Never \
-     --image=grafana/k6:latest --env BASE_URL=http://pedidos-order-api \
-     -- run - < load/baseline.js
-   ```
-2. **Rede do cluster**: CNI e kube-proxy adicionam saltos que não existem no compose.
-3. **`requests` de CPU baixos** (25m): podem limitar sob concorrência.
-4. **Tudo no mesmo nó**: os cinco pods competem pelos mesmos recursos (o control-plane tem taint
-   `NoSchedule`, então nada é agendado nele).
-
-### Achados que viram exercício nas próximas fases
-
-1. **Os thresholds atuais são frouxos.** O limite era p95 < 500 ms e a realidade foi 8,6 ms — a
-   aplicação poderia ficar 50× mais lenta sem o teste reclamar. Na Fase 7 o número passa a vir do SLO.
-2. **A taxa de erro de 0% engana.** O worker falha de propósito em ~5% e manda para a DLQ, deixando o
-   pedido em `PENDING` — e o k6 não vê nada, porque a API respondeu 201. "A API respondeu" não é
-   "o pedido foi processado": é a diferença entre SLI técnico e SLI de negócio.
-3. **O worker não acompanha a vazão da API.** A API cria ~15 pedidos/s; o worker processa ~5,7/s
-   (50–300 ms por mensagem, um de cada vez). A fila acumula durante o teste e leva minutos para
-   drenar. Isso é **consumer lag**, sem nenhum erro aparecer. Cuidado com a armadilha: `PREFETCH=10`
-   não resolve — prefetch controla a entrega antecipada, não o paralelismo do consumidor.
-   Na Fase 4 o KEDA passa a escalar o worker pelo tamanho da fila.
-4. **Medir com port-forward mede o port-forward também.** O método de medição faz parte do resultado;
-   comparar ambientes exige igualar o caminho até a aplicação.
-
 ## Plataforma (Fase 4)
 
 `docs/fase4-plataforma.md` detalha Keycloak (SSO e OIDC), Vault, Kyverno, CloudNativePG e a
 migração de Ingress para Gateway API.
 
+## Disaster recovery
+
+`docs/disaster-recovery.md` define RPO e RTO do serviço, os quatro cenários de teste
+(perda da instância, PITR, perda da fila, restore em ambiente limpo) e a tabela de resultados medidos.
+
 ## Dados e mensageria
 
 `docs/dados-e-mensageria.md` explica o papel de PostgreSQL, Redis, RabbitMQ, Kafka e MongoDB
-no lab, o custo de memória de cada um e em que fase entram.
+no lab, o custo de memória de cada um e em que fase entram. `docs/metabase.md` cobre a camada de
+análise de negócio sobre esses dados (SLI técnico x métrica de negócio).
 
 ## Troubleshooting
 

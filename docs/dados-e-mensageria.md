@@ -52,6 +52,7 @@ e o lag do consumer é justamente a medida desse atraso. Exercícios: índices, 
 | `base` | Postgres + RabbitMQ + apps | ~1,2 GiB |
 | `seguranca` | base + Keycloak, Vault, Kyverno, cert-manager, Envoy Gateway | ~2,5 GiB |
 | `dados` | base + Redis + Kafka (1 broker) + MongoDB | ~2,5 GiB |
+| `dados` + Metabase | acima + Metabase (JVM) | ~3,5 GiB |
 
 O perfil `dados` não roda junto com o de observabilidade completa. Para as fases de SLO,
 use `base` mais observabilidade; para as fases de dados, use `dados` com Prometheus e Grafana apenas.
@@ -63,5 +64,5 @@ use `base` mais observabilidade; para as fases de dados, use `dados` com Prometh
 | 1 | Postgres e RabbitMQ em docker compose (pronto) |
 | 4 | CloudNativePG, Redis e cluster do RabbitMQ no Kubernetes, via operators |
 | 7 | Métricas dos quatro sistemas no Grafana; consumer lag e profundidade de fila viram SLIs |
-| 8 | Kafka, `projection-worker` e MongoDB entram; exercícios de banco e de reprocessamento |
+| 8 | Kafka, `projection-worker` e MongoDB entram; exercícios de banco e de reprocessamento; Metabase para métricas de negócio (ver `metabase.md`) |
 | 10 | Game days: derrubar a réplica do Postgres, encher a DLQ, saturar o consumer do Kafka |

@@ -70,3 +70,5 @@ sem descartar o que está em produção.
 4. Segredo do banco saindo do Vault via ExternalSecret, sem nada sensível no Git.
 5. Política do Kyverno bloqueando pod sem `requests`/`limits` — e um PR que falha por causa dela.
 6. Failover do Postgres: derrube o primário e meça quanto tempo a aplicação leva para voltar.
+7. Disaster recovery: configure o backup contínuo para o S3 do LocalStack e execute os cenários de
+   `disaster-recovery.md`, registrando RTO e RPO medidos.
