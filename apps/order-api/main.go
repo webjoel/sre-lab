@@ -117,13 +117,13 @@ func run() int {
 			slog.Error("não foi possível conectar nas dependências", "err", err)
 			exitCode = 1
 		case <-depsReady:
-			// Passa a vigiar a conexão com o broker só depois que ela existe.
+			// Passa a vigiar a conexão e o canal do broker só depois que existem.
 			// Design crash-only: se cair, o processo encerra e o orquestrador reinicia.
 			brokerClosed = app.brokerClosed()
 			depsReady = nil // evita reentrar neste caso
 			continue
 		case amqpErr := <-brokerClosed:
-			slog.Error("conexão com RabbitMQ perdida", "err", amqpErr)
+			slog.Error("conexão ou canal com RabbitMQ fechado", "err", amqpErr)
 			exitCode = 1
 		}
 		break
