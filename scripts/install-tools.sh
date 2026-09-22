@@ -327,6 +327,11 @@ install_go() {
   local line='export PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"'
   grep -qxF "$line" "$HOME/.bashrc" 2>/dev/null || echo "$line" >> "$HOME/.bashrc"
   ok "$v instalado em /usr/local/go (PATH no ~/.bashrc; abra um novo terminal)"
+
+  # govulncheck: scanner oficial de vulnerabilidades do Go, com análise de alcançabilidade.
+  log "govulncheck"
+  PATH="/usr/local/go/bin:$HOME/go/bin:$PATH" go install golang.org/x/vuln/cmd/govulncheck@latest
+  ok "govulncheck em ~/go/bin (rode: govulncheck ./... em apps/order-api)"
 }
 
 install_helm() {

@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  # CVE nova aparece em código que não mudou: a checagem precisa rodar no tempo,
+  # não só no commit. Segunda-feira, 6h UTC.
+  schedule:
+    - cron: "0 6 * * 1"
 
 permissions:
   contents: read
@@ -73,6 +77,14 @@ jobs:
 
       - name: go build
         run: go build -o /dev/null ./...
+
+      # govulncheck é o scanner oficial do Go e faz análise de alcançabilidade: só reporta
+      # vulnerabilidade em função que o código realmente chama. Bem menos falso positivo que
+      # scanners que olham apenas o go.sum (Trivy, Dependabot) — e complementar a eles.
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck ./...
 
       # Falha se go.mod/go.sum estiverem desatualizados em relação aos imports.
       - name: go.mod está sincronizado?
