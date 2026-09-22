@@ -81,9 +81,11 @@ jobs:
       # govulncheck é o scanner oficial do Go e faz análise de alcançabilidade: só reporta
       # vulnerabilidade em função que o código realmente chama. Bem menos falso positivo que
       # scanners que olham apenas o go.sum (Trivy, Dependabot) — e complementar a eles.
+      # A versão precisa acompanhar o Go do go.mod: a v1.1.4 (x/tools v0.29) entra em panic
+      # com Go 1.27 ao analisar as dependências ("unexpected expr: *ast.KeyValueExpr").
       - name: govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
           govulncheck ./...
 
       # Falha se go.mod/go.sum estiverem desatualizados em relação aos imports.
