@@ -61,11 +61,21 @@ func connectBroker(ctx context.Context, url string) (*Broker, error) {
 		return nil, err
 	}
 
-	return &Broker{
-		conn:   conn,
-		ch:     ch,
-		closed: conn.NotifyClose(make(chan *amqp.Error, 1)),
-	}, nil
+	// O broker pode fechar só o canal (erro de protocolo, por exemplo) mantendo a conexão
+	// aberta. Vigiar apenas a conexão deixaria o pod "ready" com todo publish falhando.
+	connClosed := conn.NotifyClose(make(chan *amqp.Error, 1))
+	chClosed := ch.NotifyClose(make(chan *amqp.Error, 1))
+	closed := make(chan *amqp.Error, 1)
+	go func() {
+		select {
+		case err := <-connClosed:
+			closed <- err
+		case err := <-chClosed:
+			closed <- err
+		}
+	}()
+
+	return &Broker{conn: conn, ch: ch, closed: closed}, nil
 }
 
 func declareTopology(ch *amqp.Channel) error {
@@ -118,7 +128,7 @@ func (b *Broker) PublishOrderCreated(ctx context.Context, evt OrderCreated) erro
 	return nil
 }
 
-func (b *Broker) IsOpen() bool { return !b.conn.IsClosed() }
+func (b *Broker) IsOpen() bool { return !b.conn.IsClosed() && !b.ch.IsClosed() }
 
 func (b *Broker) Closed() <-chan *amqp.Error { return b.closed }
 

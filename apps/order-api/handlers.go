@@ -192,7 +192,7 @@ func (a *App) readyz(w http.ResponseWriter, r *http.Request) {
 		checks["rabbitmq"] = "conectando"
 		ready = false
 	case !broker.IsOpen():
-		checks["rabbitmq"] = "conexão fechada"
+		checks["rabbitmq"] = "conexão ou canal fechado"
 		ready = false
 	}
 
