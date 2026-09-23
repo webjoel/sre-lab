@@ -2,8 +2,7 @@ name: sre-lab-localstack
 
 services:
   localstack:
-    # Fixe uma tag de versão depois do primeiro uso (reprodutibilidade).
-    image: localstack/localstack:latest
+    image: localstack/localstack:latest@sha256:4abc29e923e5ed8a63d6c705a9dfa74b15d560e7055845299d87b22dabf9f6e2
     container_name: sre-lab-localstack
     ports:
       - "127.0.0.1:4566:4566"

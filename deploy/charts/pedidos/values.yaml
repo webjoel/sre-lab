@@ -41,7 +41,7 @@ paymentWorker:
       memory: 192Mi
 
 postgres:
-  image: postgres:16-alpine
+  image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
   database: pedidos
   username: pedidos
   # PROBLEMA INTENCIONAL: senha em texto claro no values, que vai para o Git.
@@ -56,7 +56,7 @@ postgres:
       memory: 512Mi
 
 rabbitmq:
-  image: rabbitmq:4-management-alpine
+  image: rabbitmq:4-management-alpine@sha256:b3b8b7f95f5382a19f9ea33540e604f30aad081d37ad9aba72255135765373a1
   username: pedidos
   password: pedidos
   storage: 1Gi

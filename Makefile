@@ -17,6 +17,24 @@ tools: ## Instala ferramentas (ex.: make tools ALVOS="go fase2"; padrão: núcle
 clean-tools: ## Diagnostica cópias duplicadas/antigas de ferramentas (use ARGS=--apply para remover)
 	@./scripts/clean-old-tools.sh $(ARGS)
 
+PINNED_FILES := Makefile docker-compose.yml docker-compose.localstack.yml \
+                apps/*/Dockerfile deploy/charts/*/values.yaml
+
+.PHONY: pin-images
+pin-images: ## Compara cada imagem fixada por digest com o digest atual da tag no registry
+	@grep -ohE '[a-z0-9./_-]+:[A-Za-z0-9._-]+@sha256:[0-9a-f]{64}' $(PINNED_FILES) | sort -u | \
+	while read -r ref; do \
+		tag=$${ref%@*}; pinado=$${ref#*@}; \
+		atual=$$(docker buildx imagetools inspect "$$tag" --format '{{.Manifest.Digest}}' 2>/dev/null); \
+		if [ -z "$$atual" ]; then echo "??  $$tag (registry inacessível)"; \
+		elif [ "$$atual" = "$$pinado" ]; then echo "ok  $$tag"; \
+		else echo "NOVA $$tag -> $$tag@$$atual"; fi; \
+	done
+	@echo
+	@echo 'NOVA = a tag aponta para outro digest. Para atualizar, troque o digest em:'
+	@echo '  $(PINNED_FILES)'
+	@echo 'Digest é mais forte que tag: tag pode ser reescrita, digest não.'
+
 .PHONY: versions
 versions: ## Mostra as versões instaladas em tabela Markdown
 	@./scripts/tool-versions.sh
@@ -72,14 +90,17 @@ hooks: ## Instala os hooks do pre-commit e atualiza as versões
 
 # ---------- Fase 1: aplicações em docker compose ----------
 
-GO_IMAGE ?= golang:1.27
+GO_IMAGE ?= golang:1.27@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244
 
 # BASE_URL é o alvo dos testes (smoke, k6). No compose a API responde direto em localhost:8080;
 # no cluster é preciso um port-forward ativo (make k8s-fwd) apontando para a mesma porta.
 BASE_URL ?= http://localhost:8080
 
 # k6 em container: nada para instalar. --network host permite alcançar a API em localhost.
-K6_IMAGE ?= grafana/k6:latest
+# Imagens fixadas por digest (tag mantida só para leitura; o digest é o que vale).
+# 'make pin-images' mostra os digests atuais. Atualização vira PR do Dependabot na Fase 6.
+K6_IMAGE         ?= grafana/k6:latest@sha256:5221b620a4f874faff6e32ba597aa667c058391fe4898b1c6f6377f062c6cdec
+LOCALSTACK_IMAGE ?= localstack/localstack:latest@sha256:4abc29e923e5ed8a63d6c705a9dfa74b15d560e7055845299d87b22dabf9f6e2
 VUS      ?= 10
 DURATION ?= 1m
 K6 = docker run --rm -i --network host -v "$(CURDIR)":/work -w /work -e BASE_URL=$(BASE_URL) $(K6_IMAGE)
@@ -121,6 +142,8 @@ images: ## Compara o tamanho das imagens das aplicações
 # ---------- Fase 2: Kubernetes ----------
 
 NAMESPACE ?= pedidos
+K8S_VERSION ?= 1.35.0
+KUBECONFORM_IMAGE ?= ghcr.io/yannh/kubeconform:v0.7.0@sha256:85dbef6b4b312b99133decc9c6fc9495e9fc5f92293d4ff3b7e1b30f5611823c
 RELEASE   ?= pedidos
 CHART     := deploy/charts/pedidos
 IMAGE_TAG ?= dev
@@ -132,9 +155,15 @@ k8s-build: ## Builda as imagens e carrega no cluster kind (sem registry)
 	kind load docker-image sre-lab/order-api:$(IMAGE_TAG) sre-lab/payment-worker:$(IMAGE_TAG) --name $(CLUSTER_NAME)
 
 .PHONY: k8s-lint
-k8s-lint: ## Valida o chart (lint + render) sem aplicar nada
+k8s-lint: ## Valida o chart: lint, render e schema do Kubernetes (mesmas checagens do CI)
 	helm lint $(CHART)
-	helm template $(RELEASE) $(CHART) --namespace $(NAMESPACE) > /dev/null && echo "template OK"
+	@helm template $(RELEASE) $(CHART) --namespace $(NAMESPACE) > /tmp/sre-lab-render.yaml && echo "template OK"
+	@if command -v kubeconform >/dev/null 2>&1; then \
+		kubeconform -strict -summary -kubernetes-version $(K8S_VERSION) /tmp/sre-lab-render.yaml; \
+	else \
+		echo "kubeconform não instalado; usando container (make tools ALVOS=\"fase6\" instala local)"; \
+		docker run --rm -i $(KUBECONFORM_IMAGE) -strict -summary -kubernetes-version $(K8S_VERSION) < /tmp/sre-lab-render.yaml; \
+	fi
 
 .PHONY: k8s-up
 k8s-up: k8s-build ## Instala/atualiza a release no cluster
