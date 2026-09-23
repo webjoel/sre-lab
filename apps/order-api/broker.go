@@ -98,7 +98,16 @@ func declareTopology(ch *amqp.Channel) error {
 	return ch.QueueBind(ordersQueue, ordersRoutingKey, ordersExchange, false, nil)
 }
 
+// publishTimeout limita a espera pelo confirm do broker. Sem ele, um RabbitMQ em
+// alarme de memória bloqueia o publisher e a requisição fica pendurada até o
+// WriteTimeout do servidor HTTP (30s) — uma dependência lenta viraria latência alta
+// na API inteira. Melhor falhar rápido e devolver 503.
+const publishTimeout = 5 * time.Second
+
 func (b *Broker) PublishOrderCreated(ctx context.Context, evt OrderCreated) error {
+	ctx, cancel := context.WithTimeout(ctx, publishTimeout)
+	defer cancel()
+
 	body, err := json.Marshal(evt)
 	if err != nil {
 		return err
