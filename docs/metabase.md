@@ -20,7 +20,8 @@ uma das competências que separam SRE sênior de pleno.
 
 Nada é instalado no host: o Metabase roda no cluster, como os demais serviços. Entra como uma
 Application do ArgoCD apontando para `platform/metabase/` (manifests próprios, não há chart oficial
-mantido pela Metabase), dentro do perfil `dados`.
+mantido pela Metabase), dentro do perfil `dados`. **Esses manifests são escritos na Fase 8; hoje o
+diretório ainda não existe.**
 
 ### Desenho
 

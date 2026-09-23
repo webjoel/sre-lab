@@ -60,6 +60,9 @@ Em todos, **anote o horário de início e de fim**. O número medido é o objeti
 
 Simula falha de nó ou exclusão acidental do banco.
 
+> Os manifests de recuperação citados abaixo (`deploy/dr/`) são criados na Fase 4, junto com o
+> cluster CloudNativePG. Até lá, este documento é o plano, não um procedimento executável.
+
 ```bash
 # 1. Estado antes: guarde a contagem e o último id
 kubectl -n pedidos exec -it pedidos-pg-1 -- psql -U pedidos -d pedidos \
@@ -127,7 +130,8 @@ implícita — o Secret do bucket, o namespace, a credencial. É esse achado que
 
 ## 5. Runbook e postmortem
 
-Cada cenário gera dois artefatos, que valem mais que o exercício em si:
+Cada cenário gera dois artefatos, que valem mais que o exercício em si. **Ainda não existem no
+repositório: são a entrega desta parte da Fase 4.**
 
 - `docs/runbooks/restore-postgres.md` — passo a passo executável sob pressão, com os comandos exatos.
 - `docs/postmortems/` — o que foi medido, o que não funcionou de primeira, o que mudou depois.
