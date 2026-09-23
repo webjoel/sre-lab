@@ -23,6 +23,8 @@ spec:
         runAsNonRoot: true
         runAsUser: 70        # usuário postgres na imagem alpine
         fsGroup: 70          # garante que o PVC seja gravável por esse grupo
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgres
           image: {{ .Values.postgres.image }}
@@ -53,6 +55,11 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 15
           resources: {{- toYaml .Values.postgres.resources | nindent 12 }}
+          # Sem readOnlyRootFilesystem: banco e broker escrevem no próprio filesystem.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: dados
               mountPath: /var/lib/postgresql/data

@@ -20,6 +20,8 @@ spec:
         runAsNonRoot: true
         runAsUser: 100
         fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: rabbitmq
           image: {{ .Values.rabbitmq.image }}
@@ -51,6 +53,11 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 15
           resources: {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
+          # Sem readOnlyRootFilesystem: banco e broker escrevem no próprio filesystem.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: dados
               mountPath: /var/lib/rabbitmq
