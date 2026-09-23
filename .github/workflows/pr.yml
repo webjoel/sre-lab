@@ -57,6 +57,18 @@ jobs:
             | tar -xz kubeconform
           ./kubeconform -strict -summary -kubernetes-version 1.35.0 /tmp/render.yaml
 
+  # O Helm só lê arquivos de dentro do chart, então o schema existe em dois lugares.
+  # Este job garante que as cópias não divirjam silenciosamente.
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Migrations do chart == migrations da aplicação
+        run: |
+          diff -u apps/order-api/migrations/001_orders.sql \
+                  deploy/charts/pedidos/files/001_orders.sql \
+            || { echo "::error::As duas cópias do schema divergiram. Sincronize-as."; exit 1; }
+
   go:
     runs-on: ubuntu-latest
     defaults:
