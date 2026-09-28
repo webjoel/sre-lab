@@ -82,6 +82,18 @@ jobs:
           go-version-file: apps/order-api/go.mod
           cache-dependency-path: apps/order-api/go.sum
 
+      # gofmt é o formato canônico do Go; o pre-commit não tem hook de Go, então é aqui
+      # que arquivo fora do padrão é barrado.
+      - name: gofmt
+        run: |
+          fora=$(gofmt -l .)
+          if [ -n "$fora" ]; then
+            echo "::error::Arquivos fora do gofmt (rode 'gofmt -w .' em apps/order-api):"
+            echo "$fora"
+            gofmt -d .
+            exit 1
+          fi
+
       # go vet encontra erros que compilam mas estão errados (printf com argumento
       # trocado, lock copiado por valor, etc.)
       - name: go vet
