@@ -82,6 +82,9 @@ func (r createOrderRequest) validate() error {
 	return nil
 }
 
+// insertTimeout limita a gravação do pedido, que não herda o cancelamento da requisição.
+const insertTimeout = 5 * time.Second
+
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 const orderColumns = `id::text, customer_id, amount_cents, currency, status, created_at, updated_at`
@@ -111,8 +114,16 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Escrita desacoplada do ciclo de vida da requisição: se o cliente desistir depois do
+	// INSERT, o publish não pode ser cancelado junto, ou o pedido fica PENDING para sempre.
+	// WithoutCancel descarta o cancelamento mas preserva os valores (tracing, na Fase 7);
+	// cada etapa tem o próprio prazo (o publish aplica publishTimeout internamente).
+	writeCtx := context.WithoutCancel(r.Context())
+	insertCtx, cancel := context.WithTimeout(writeCtx, insertTimeout)
+	defer cancel()
+
 	var o Order
-	row := db.QueryRow(r.Context(),
+	row := db.QueryRow(insertCtx,
 		`INSERT INTO orders (customer_id, amount_cents, currency) VALUES ($1, $2, $3) RETURNING `+orderColumns,
 		req.CustomerID, req.AmountCents, strings.ToUpper(req.Currency))
 	if err := scanOrder(row, &o); err != nil {
@@ -124,7 +135,7 @@ func (a *App) createOrder(w http.ResponseWriter, r *http.Request) {
 	// PROBLEMA INTENCIONAL (exercício da Fase 8): gravar no banco e publicar na fila não é atômico.
 	// Se o publish falhar, o pedido fica PENDING para sempre. A correção clássica é o padrão Outbox.
 	evt := OrderCreated{OrderID: o.ID, AmountCents: o.AmountCents, Currency: o.Currency}
-	if err := broker.PublishOrderCreated(r.Context(), evt); err != nil {
+	if err := broker.PublishOrderCreated(writeCtx, evt); err != nil {
 		slog.Error("pedido gravado mas evento não publicado", "order_id", o.ID, "err", err)
 		writeError(w, http.StatusServiceUnavailable, "pedido gravado, mas não enviado para processamento")
 		return
