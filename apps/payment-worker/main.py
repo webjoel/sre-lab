@@ -31,6 +31,13 @@ PROCESSING_MS_MIN = int(os.getenv("PROCESSING_MS_MIN", "50"))
 PROCESSING_MS_MAX = int(os.getenv("PROCESSING_MS_MAX", "300"))
 PREFETCH = int(os.getenv("PREFETCH", "10"))
 HEALTH_PORT = int(os.getenv("HEALTH_PORT", "8081"))
+# Sem connect_timeout, conectar num host que não responde pendura até o timeout TCP
+# do kernel (~2 min) e o retry não avança.
+DB_CONNECT_TIMEOUT_S = int(os.getenv("DB_CONNECT_TIMEOUT_S", "5"))
+# Um UPDATE travado (lock, banco degradado) pararia o consumo com o /healthz em 200.
+# Com statement_timeout a query estoura (QueryCanceled é OperationalError), o processo
+# encerra e a mensagem sem ack volta para a fila: crash-only, como na order-api.
+DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "5000"))
 
 log = logging.getLogger("payment-worker")
 state = {"consuming": False}
@@ -177,7 +184,13 @@ def main() -> int:
     start_health_server()
 
     db = connect_with_retry(
-        lambda: psycopg.connect(DATABASE_URL, autocommit=True), "postgres"
+        lambda: psycopg.connect(
+            DATABASE_URL,
+            autocommit=True,
+            connect_timeout=DB_CONNECT_TIMEOUT_S,
+            options=f"-c statement_timeout={DB_STATEMENT_TIMEOUT_MS}",
+        ),
+        "postgres",
     )
     params = pika.URLParameters(AMQP_URL)
     params.heartbeat = 30
