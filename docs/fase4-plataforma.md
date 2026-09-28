@@ -72,3 +72,16 @@ sem descartar o que está em produção.
 6. Failover do Postgres: derrube o primário e meça quanto tempo a aplicação leva para voltar.
 7. Disaster recovery: configure o backup contínuo para o S3 do LocalStack e execute os cenários de
    `disaster-recovery.md`, registrando RTO e RPO medidos.
+
+## Pendências herdadas da Fase 2
+
+Coisas que não fazem sentido com uma réplica só, mas passam a fazer quando o KEDA escalar o
+payment-worker:
+
+- **PodDisruptionBudget do payment-worker.** Com 1 réplica, um PDB `minAvailable: 1` só impede o
+  drain do nó. Com várias réplicas, evita que um drain derrube o consumo inteiro de uma vez.
+  Atenção ao interagir com o KEDA: se o mínimo de réplicas puder ser zero, o PDB precisa tolerar isso.
+- **topologySpreadConstraints no payment-worker**, como a order-api já tem: réplicas em nós
+  diferentes, para a perda de um nó não parar o consumo.
+- **priorityClassName** para as aplicações: sob pressão de memória, o scheduler despeja antes o
+  que é menos importante (ex.: Metabase) e preserva o caminho do pedido.
