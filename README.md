@@ -167,11 +167,13 @@ make k8s-fwd             # expõe a API em localhost:8080 (bloqueia o terminal)
 make k8s-logs            # logs das aplicações
 make k8s-psql            # psql no Postgres do cluster
 make k8s-queues          # profundidade das filas
+make k6-cluster          # carga com k6 de dentro do cluster, distribuída entre as réplicas
 make k8s-down            # remove a release (PVCs sobrevivem)
+make k8s-purge           # remove a release, os PVCs e o namespace
 ```
 
 Decisões do chart, problemas intencionais e sete exercícios de troubleshooting em
-`docs/fase2-kubernetes.md`.
+`docs/fase2-kubernetes.md`. Comece os exercícios com `make k8s-up`, para o cluster rodar o código atual.
 
 O LocalStack só é necessário a partir da Fase 3 (Terraform criando recursos "AWS"). Quando chegar lá:
 `cp .env.example .env`, coloque o `LOCALSTACK_AUTH_TOKEN` (conta gratuita) e rode `make localstack-up`.
