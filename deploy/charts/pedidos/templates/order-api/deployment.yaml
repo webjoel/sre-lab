@@ -5,7 +5,11 @@ metadata:
   labels: {{- include "pedidos.labels" . | nindent 4 }}
     app.kubernetes.io/component: order-api
 spec:
+  {{- /* Com HPA, quem decide as réplicas é ele. Declarar replicas aqui faz todo helm upgrade
+         brigar com o HPA pelo campo (conflito de server-side apply, o upgrade falha). */}}
+  {{- if not .Values.orderApi.autoscaling.enabled }}
   replicas: {{ .Values.orderApi.replicaCount }}
+  {{- end }}
   selector:
     matchLabels: {{- include "pedidos.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: order-api
