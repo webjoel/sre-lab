@@ -182,14 +182,35 @@ k8s-status: ## Visão da RELEASE: pods, services, PVCs e eventos do namespace
 
 .PHONY: k8s-logs
 k8s-logs: ## Logs das aplicações (todas as réplicas)
-	kubectl -n $(NAMESPACE) logs -l app.kubernetes.io/part-of=pedidos --all-containers --prefix -f --tail=50
+	kubectl -n $(NAMESPACE) logs -l app.kubernetes.io/part-of=pedidos --all-containers --prefix -f --tail=50 \
+		--max-log-requests=20 # padrão é 5: com o HPA escalando, -f falharia
+
+# k6 DENTRO do cluster, batendo no Service. port-forward conecta em UM pod só: com ele o HPA
+# escala, mas as réplicas novas não recebem nada. --no-vu-connection-reuse abre conexão nova
+# a cada iteração, senão os VUs ficam presos aos pods que existiam quando a carga começou.
+K6_CLUSTER_OVERRIDES = {"spec":{"containers":[{"name":"k6","image":"$(K6_IMAGE)", \
+	"args":["run","--no-vu-connection-reuse","-e","VUS=$(VUS)","-e","DURATION=$(DURATION)", \
+	        "-e","BASE_URL=http://$(RELEASE)-order-api","/scripts/baseline.js"], \
+	"volumeMounts":[{"name":"scripts","mountPath":"/scripts"}]}], \
+	"volumes":[{"name":"scripts","configMap":{"name":"k6-scripts","items":[ \
+	  {"key":"baseline.js","path":"baseline.js"},{"key":"orders.js","path":"lib/orders.js"}]}}]}}
+
+.PHONY: k6-cluster
+k6-cluster: ## Carga com k6 de dentro do cluster, via Service (use para o HPA); ex.: make k6-cluster VUS=50
+	@kubectl -n $(NAMESPACE) create configmap k6-scripts --from-file=load/baseline.js \
+		--from-file=load/lib/orders.js --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+	kubectl -n $(NAMESPACE) run k6 --rm -i --restart=Never --image=$(K6_IMAGE) \
+		--overrides='$(K6_CLUSTER_OVERRIDES)'
+
+METRICS_SERVER_CHART ?= 3.14.0
+NETSHOOT_IMAGE       ?= nicolaka/netshoot:v0.16
 
 .PHONY: k8s-metrics
 k8s-metrics: ## Instala o metrics-server (necessário para kubectl top e HPA)
 	helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/ 2>/dev/null || true
 	helm repo update metrics-server
 	helm upgrade --install metrics-server metrics-server/metrics-server \
-		--namespace kube-system \
+		--version $(METRICS_SERVER_CHART) --namespace kube-system \
 		--set 'args={--kubelet-insecure-tls}' \
 		--wait
 	@echo "Aguardando primeira coleta..."; sleep 20; kubectl top nodes
@@ -203,6 +224,6 @@ k8s-queues: ## Profundidade das filas no RabbitMQ do cluster
 	kubectl -n $(NAMESPACE) exec sts/$(RELEASE)-rabbitmq -- rabbitmqctl list_queues name messages
 
 .PHONY: k8s-debug
-k8s-debug: ## Container efêmero com ferramentas de rede (POD=<nome do pod>)
-	@test -n "$(POD)" || { echo "uso: make k8s-debug POD=<nome do pod>"; exit 1; }
-	kubectl -n $(NAMESPACE) debug -it $(POD) --image=nicolaka/netshoot --target=order-api
+k8s-debug: ## Container efêmero com ferramentas de rede (POD=<pod> [ALVO=<container>])
+	@test -n "$(POD)" || { echo "uso: make k8s-debug POD=<nome do pod> [ALVO=payment-worker]"; exit 1; }
+	kubectl -n $(NAMESPACE) debug -it $(POD) --image=$(NETSHOOT_IMAGE) --target=$(or $(ALVO),order-api)
